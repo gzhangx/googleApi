@@ -1,7 +1,9 @@
-export interface IRefresCreds {
-    refresh_token: string;
+export interface IGClientCreds {
     client_id: string;
     client_secret: string;
+}
+export interface IRefresCreds extends IGClientCreds {
+    refresh_token: string;
 }
 export declare function getFormData(obj: {
     [id: string]: any;
@@ -25,7 +27,16 @@ export interface IGoogleClient {
         read: (range: string) => Promise<any>;
     };
 }
+export interface IGoogleToken {
+    access_token: string;
+    expires_in: number;
+    refresh_token: string;
+    scope: string;
+    token_type: string;
+}
+export declare function getTokenFromCode(creds: IGClientCreds, code: string, redirect_uri: string): Promise<IGoogleToken>;
 export declare function getClient(creds: IRefresCreds): Promise<IGoogleClient>;
+export declare function getClientCredsByEnv(envName: string): IGClientCreds;
 export declare function getClientByEnv(envName: string): Promise<IGoogleClient>;
 export declare function test(d: boolean): Promise<void>;
 export {};

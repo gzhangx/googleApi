@@ -1,3 +1,3 @@
-import { getFormData, getClient, getClientByEnv } from './googleApi'
+import { getFormData, getClient, getClientByEnv, getTokenFromCode } from './googleApi'
 
-export { getFormData, getClient, getClientByEnv }
+export { getFormData, getClient, getClientByEnv,getTokenFromCode }

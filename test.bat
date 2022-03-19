@@ -1,2 +1,2 @@
 call node_modules\.bin\tsc
-call node build\index
+call node lib\index

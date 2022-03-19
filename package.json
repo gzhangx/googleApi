@@ -1,6 +1,6 @@
 {
   "name": "@gzhangx/googleapi",
-  "version": "0.0.1",
+  "version": "0.0.02",
   "description": "google api helper",
   "main": "index.js",
   "scripts": {

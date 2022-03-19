@@ -6,10 +6,13 @@
 
 import axios, {Method} from 'axios';
 
-export interface IRefresCreds {
-    refresh_token: string;
+export interface IGClientCreds {
     client_id: string;
     client_secret: string;
+}
+
+export interface IRefresCreds extends IGClientCreds {
+    refresh_token: string;    
 }
 
 
@@ -43,6 +46,30 @@ export interface IGoogleClient {
     };
 }
 
+export interface IGoogleToken {
+    access_token: string;
+    expires_in: number;
+    refresh_token: string;
+    scope: string;
+    token_type: string;  //'Bearer'
+}
+
+export async function getTokenFromCode(creds: IGClientCreds, code:string, redirect_uri:string) : Promise<IGoogleToken> {
+    const { client_id, client_secret } = creds;
+    const dataStr = getFormData({
+        client_secret,
+        client_id,
+        code,
+        redirect_uri,
+        grant_type: 'authorization_code'
+    });
+
+    const tokenBody = await axios.post('https://oauth2.googleapis.com/token', dataStr,
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {            
+            return r.data;
+        });
+    return tokenBody;
+}
 async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
     const { refresh_token, client_id, client_secret } = creds;
         
@@ -112,6 +139,14 @@ export async function getClient(creds: IRefresCreds) {
         clients[name] = client;
     }
     return client;
+}
+
+export function getClientCredsByEnv(envName: string) {
+    const creds: IGClientCreds = {
+        client_id: process.env[`google.${envName}.client_id`] as string,
+        client_secret: process.env[`google.${envName}.client_secret`] as string,
+    };    
+    return creds;
 }
 
 export async function getClientByEnv(envName: string) {
@@ -247,3 +282,15 @@ export async function test(d:boolean) {
 //   console.log(err.response.text);
 //})
 
+/*
+async function test2() {
+    const creds = getClientCredsByEnv('gzperm');    
+    await getTokenFromCode(creds, '4/xxxx', 'http://localhost:3000');
+}
+console.log('invoking test2')
+test2().catch(err => {
+    console.log('error');
+    //console.log(err);
+   console.log(err.response.text || err.response.data);
+})
+*/
