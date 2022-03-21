@@ -143,17 +143,16 @@ export async function getClient(creds: IRefresCreds) {
 
 export function getClientCredsByEnv(envName: string) {
     const creds: IGClientCreds = {
-        client_id: process.env[`google.${envName}.client_id`] as string,
-        client_secret: process.env[`google.${envName}.client_secret`] as string,
+        client_id: process.env[`google_${envName}_client_id`] as string,
+        client_secret: process.env[`google_${envName}_client_secret`] as string,
     };    
     return creds;
 }
 
 export async function getClientByEnv(envName: string) {
     const creds: IRefresCreds = {
-        client_id: process.env[`google.${envName}.client_id`] as string,
-        client_secret: process.env[`google.${envName}.client_secret`] as string,
-        refresh_token: process.env[`google.${envName}.refresh_token`] as string,
+        ...getClientCredsByEnv(envName),
+        refresh_token: process.env[`google_${envName}_refresh_token`] as string,
     };
     return getClient(creds);
 }
