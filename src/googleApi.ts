@@ -84,7 +84,7 @@ export interface IGoogleClient {
         read: (range: string) => Promise<any>;
         sheetInfo: ()=>Promise<ISheetInfoSimple[]>;
         createSheet: (sheetId: string, title: string)=>Promise<any>;
-        updateValues: (range: string, values: string[][], opts: IGoogleUpdateParms) => Promise<any>;
+        updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<any>;
         addSheet: (title: string)=>Promise<any>;
     };
 }
@@ -126,7 +126,7 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {
             return r.data;
         });
-              
+
     const {
         access_token, expires_in, token_type
     } = refreshBody;
@@ -193,14 +193,14 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
                 read: range => read({ id, range }),
                 sheetInfo,
                 createSheet,
-                updateValues: (range:string, values: string[][], opts: IGoogleUpdateParms) => {
+                updateValues: (range:string, values: string[][], opts?: IGoogleUpdateParms) => {
                     if (!opts) {
                         opts = {
                             valueInputOption: 'USER_ENTERED'
                         }
                     }
                     if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
-                    return doOp('put', id, `/values/${range}?${getFormData(opts)}`, {
+                    return doOp('put', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
                         values,
                     })
                 },
@@ -258,8 +258,13 @@ export async function getClientByEnv(envName: string) {
 }
 
 export async function test(d:boolean) {
-    const cli = await getClientByEnv('gzprem');
-
+    const cli = await getClientByEnv('gzperm');
+    const ops = await cli.getSheetOps('1u_AR8y7iCRPGyDhdOb1cHhjL-vclCIxuLkMhIxd08mU')
+    console.log('update val')
+    const rrr = await ops.updateValues('Sheet1!G18:G18', [['1']]);
+    console.log('update done')
+console.log(rrr)
+if (d) return;
     if (!cli) return console.log('failed to get client');
     const id = '1MO27odjCsxk6MWL0DygubU53hrtt3OB8SEnqjpUHJ-U';
     if (d) return;
@@ -377,9 +382,10 @@ export async function test(d:boolean) {
     console.log(await sheet.read('A1:B4'));
 }
 
-//test().catch(err => {
-//   console.log(err.response.text);
-//})
+test(true).catch(err => {
+    ///console.log(err)
+   console.log(err.response.data);
+})
 
 /*
 async function test2() {
