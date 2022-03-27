@@ -15,6 +15,45 @@ export interface IRefresCreds extends IGClientCreds {
     refresh_token: string;    
 }
 
+export interface IGoogleSheetGridProperties {
+    rowCount: number;
+    columnCount: number;
+    frozenRowCount: number;
+    frozenColumnCount: number;
+}
+interface IGoogleSheetInfo {
+    spreadsheetId: string;
+    properties: {
+        title: string;
+        locale: string;
+        autoRecalc: string;//ON_CHANGE
+        timeZone: string;// "America/New_York",
+        defaultFormat: any;
+    },
+    sheets: {
+        properties: {
+            sheetId: number;
+            title: string;
+            index: number;
+            sheetType: string; // "GRID",
+            gridProperties: IGoogleSheetGridProperties
+        };
+    }[];
+}
+
+export interface ISheetInfoSimple extends IGoogleSheetGridProperties{
+    sheetId: number;
+    title: string;
+    index: number; //not important,
+};
+
+//https://developers.google.com/sheets/api/reference/rest/v4/ValueInputOption
+export interface IGoogleUpdateParms {
+    valueInputOption: 'INPUT_VALUE_OPTION_UNSPECIFIED' | 'RAW' | 'USER_ENTERED';
+    includeValuesInResponse?: boolean;
+    responseValueRenderOption?: 'FORMATTED_VALUE' | 'UNFORMATTED_VALUE' | 'FORMULA';
+    responseDateTimeRenderOption?: 'FORMATTED_STRING'|'SERIAL_NUMBER';
+}
 
 export function getFormData(obj: { [id: string]: any }): (string|null) {
     if (!obj) return null;
@@ -39,7 +78,7 @@ export interface IGoogleClient {
     doBatchUpdate: (id: string, data: any) => Promise<any>;
     append: IAppendFunc;
     read: IReadFunc;
-    getSheeOps: (id: string) => {
+    getSheetOps: (id: string) => {
         doBatchUpdate: (data: any) => Promise<any>;
         append: (range:string, data: any, opts?: any) => Promise<any>;
         read: (range:string)=>Promise<any>;
@@ -116,11 +155,68 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
         doBatchUpdate,
         append,
         read,
-        getSheeOps: id => {
+        getSheetOps: id => {
+            const getInfo = () => doOp('get', id, '') as Promise<IGoogleSheetInfo>;
+            const createSheet = async (sheetId: string, title: string) => {
+                return doBatchUpdate(id, {
+                    requests: [
+                        {
+                            addSheet: {
+                                properties: {
+                                    sheetId,
+                                    title,
+                                }
+                            }
+                        }
+                    ]
+                })
+            };
+            const sheetInfo = async () => {
+                const sheetInfos = await getInfo();
+                return sheetInfos.sheets.map(s => {
+                    const props = s.properties;
+                    return {
+                        sheetId: props.sheetId,
+                        title: props.title,
+                        index: props.index, //not important,
+                        ...props.gridProperties, //rowCount, columnCount
+                    } as ISheetInfoSimple;
+                })
+            };
             return {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 append: (range, data, ops) => append({ id, range }, data, ops),
                 read: range => read({ id, range }),
+                sheetInfo,
+                createSheet,
+                updateValues: (range:string, values: string[][], opts: IGoogleUpdateParms) => {
+                    if (!opts) {
+                        opts = {
+                            valueInputOption: 'USER_ENTERED'
+                        }
+                    }
+                    if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
+                    return doOp('put', id, `/values/${range}?${getFormData(opts)}`, {
+                        values,
+                    })
+                },
+                addSheet: async (title: string) => {
+                    const sheetsInfo = await sheetInfo();                
+                    //input YYYY, sheetId,
+                    const found = sheetsInfo.find(s => s.title === title);
+                    if (found) {
+                        return {
+                            found,
+                        }
+                    }
+                    let newId = 0;
+                    for (; ; newId++) {
+                        const existing = sheetsInfo.find(s => s.sheetId === newId);
+                        if (existing) continue;
+                        break;
+                    }
+                    return createSheet(newId.toString(), title);
+                },            
             }
         }
     }
@@ -253,7 +349,7 @@ export async function test(d:boolean) {
 
 
 
-    const sheet = cli.getSheeOps(id);
+    const sheet = cli.getSheetOps(id);
     sheet.doBatchUpdate({
         "requests": [
             {
