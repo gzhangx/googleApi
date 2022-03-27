@@ -81,7 +81,11 @@ export interface IGoogleClient {
     getSheetOps: (id: string) => {
         doBatchUpdate: (data: any) => Promise<any>;
         append: (range:string, data: any, opts?: any) => Promise<any>;
-        read: (range:string)=>Promise<any>;
+        read: (range: string) => Promise<any>;
+        sheetInfo: ()=>Promise<ISheetInfoSimple[]>;
+        createSheet: (sheetId: string, title: string)=>Promise<any>;
+        updateValues: (range: string, values: string[][], opts: IGoogleUpdateParms) => Promise<any>;
+        addSheet: (title: string)=>Promise<any>;
     };
 }
 
