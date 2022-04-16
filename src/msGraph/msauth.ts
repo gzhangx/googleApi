@@ -99,9 +99,9 @@ export function getAuth(opt: IAuthOpt) {
     const promptUser = opt.promptUser || console.log;
     const saveToken = opt.saveToken;
 
-    const resource = 'https://graph.microsoft.com';
     const scope = opt.scope || 'Mail.Read openid profile User.Read email Files.ReadWrite.All Files.ReadWrite Files.Read Files.Read.All Files.Read.Selected Files.ReadWrite.AppFolder Files.ReadWrite.Selected';
-    const queryCodeurl = `https://login.microsoftonline.com/${tenantId}/oauth2/token`;
+    const baseQueryUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0`;
+    const queryCodeurl = `${baseQueryUrl}/token`;
 
     
     async function doPost(url: string, data: { [id: string]: any }): Promise<any> {
@@ -115,8 +115,7 @@ export function getAuth(opt: IAuthOpt) {
         });
     }
     async function getRefreshToken() :Promise<IRefreshTokenResult> {        
-        const codeWaitInfo = await doPost(`https://login.microsoftonline.com/${tenantId}/oauth2/devicecode`, {
-            resource,
+        const codeWaitInfo = await doPost(`${baseQueryUrl}/devicecode`, {
             scope,
             client_id,
         }) as ICodeWaitInfo;
@@ -159,7 +158,6 @@ export function getAuth(opt: IAuthOpt) {
         const { refresh_token } = opt;
         const form = {
             scope,
-            resource,
             refresh_token,
             grant_type: 'refresh_token',
             client_id
