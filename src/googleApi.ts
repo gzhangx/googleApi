@@ -374,10 +374,10 @@ if (d) return;
     console.log(await sheet.read('A1:B4'));
 }
 
-test(true).catch(err => {
+//test(true).catch(err => {
     ///console.log(err)
-   console.log(err.response.data);
-})
+   //console.log(err.response.data);
+//})
 
 /*
 async function test2() {

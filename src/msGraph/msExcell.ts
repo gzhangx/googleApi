@@ -45,6 +45,7 @@ export interface IReadSheetValues {
 export interface IMsExcelOps {
     getWorkSheets: () => Promise<IWorkSheetInfo>;
     createSheet: (name: string) => Promise<any>;
+    readAll: (name: string) => Promise<IReadSheetValues>;
     readRange: (name: string, from: string, to: string) => Promise<IReadSheetValues>;
     getRangeFormat: (name: string, from: string, to: string) => Promise<IReadSheetValues>;
     updateRange: (name: string, from: string, to: string, values: string[][]) => Promise<IReadSheetValues>;
@@ -53,20 +54,20 @@ export interface IMsExcelOps {
 
 export async function getMsExcel(tenantClientInfo: IMsGraphCreds, prm: IMsGraphDirPrms,opt: IMsGraphExcelItemOpt): Promise<IMsExcelOps> {
     const ops = await getDefaultMsGraphConn(tenantClientInfo, prm.logger);    
-
-    if (!prm.driveId) {
-        if (!prm.sharedUrl) {
-            const error = `Must specify drive or sharedUrl`;
-            prm.logger(error);
-            throw {
-                error,
-                message: error,
-            }
-        }
-        const dirInfo = await getMsDir(tenantClientInfo, prm);
-        prm.driveId = dirInfo.driveId;
-    }
+    
     if (!opt.itemId) {
+        if (!prm.driveId) {
+            if (!prm.sharedUrl) {
+                const error = `Must specify drive or sharedUrl`;
+                prm.logger(error);
+                throw {
+                    error,
+                    message: error,
+                }
+            }
+            const dirInfo = await getMsDir(tenantClientInfo, prm);
+            prm.driveId = dirInfo.driveId;
+        }
         const drItmUrl = `${getDriveUrl(prm.driveId, opt.fileName)}`;    
         const r: IDriveItemInfo = await ops.doGet(drItmUrl);
         opt.itemId = r.id;
@@ -91,6 +92,10 @@ export async function getMsExcel(tenantClientInfo: IMsGraphCreds, prm: IMsGraphD
         });
     }
 
+    async function readAll(name: string): Promise<IReadSheetValues> {
+        return ops.doGet((`${sheetUrl}('${name}')/usedRange`));
+    }
+
     async function readRange(name: string, from: string, to: string): Promise<IReadSheetValues> {
         return ops.doGet((`${sheetUrl}/${name}/range(address='${from}:${to}')`));
     }
@@ -108,6 +113,7 @@ export async function getMsExcel(tenantClientInfo: IMsGraphCreds, prm: IMsGraphD
     return {
         getWorkSheets,
         createSheet,
+        readAll,
         readRange,
         getRangeFormat,
         updateRange,

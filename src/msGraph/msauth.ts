@@ -16,9 +16,22 @@ export interface IAuthOpt extends IMsGraphCreds {
     //client_id: string;
     //refresh_token: string; //optional
     promptUser: (msg: string|object, info:object) => void;
-    saveToken: (token: object) => Promise<void>;
+    saveToken: (token: IRefreshTokenResult) => Promise<void>;
     scope?: string;
     pollTime?: number;
+}
+
+export interface IRefreshTokenResult {
+    token_type: 'Bearer';
+    scope: string;
+    expires_in: string;
+    ext_expires_in: string;
+    expires_on: string;
+    not_before: string;
+    resource: 'https://graph.microsoft.com',
+    access_token: string;
+    refresh_token: string;
+    id_token: string;
 }
 
 interface ICodeWaitInfo {
@@ -101,7 +114,7 @@ export function getAuth(opt: IAuthOpt) {
             return (r.data);
         });
     }
-    async function getRefreshToken() {        
+    async function getRefreshToken() :Promise<IRefreshTokenResult> {        
         const codeWaitInfo = await doPost(`https://login.microsoftonline.com/${tenantId}/oauth2/devicecode`, {
             resource,
             scope,
@@ -114,23 +127,31 @@ export function getAuth(opt: IAuthOpt) {
         const message = codeWaitInfo.message; //send user code to url
         await promptUser(message, codeWaitInfo);
         while (true) {
-            const rr = await doPost(queryCodeurl, {
-                grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-                resource: 'https://graph.microsoft.com',
-                scope,
-                code: deviceCode,
-                client_id
-            });
-            if (rr.error === 'authorization_pending') {
-                //await promise.Promise.delay(opt.pollTime || 1000);
-                await delay(opt.pollTime || 1000);
-                continue;
+            try {
+                const rr = await doPost(queryCodeurl, {
+                    grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+                    resource: 'https://graph.microsoft.com',
+                    scope,
+                    code: deviceCode,
+                    client_id
+                });
+                if (rr.error === 'authorization_pending') { //this no longer works with axios
+                    //await promise.Promise.delay(opt.pollTime || 1000);
+                    await delay(opt.pollTime || 1000);
+                    continue;
+                }
+                ///console.log(rr);
+                //const { access_token, refresh_token } = rr;
+                //fs.writeFileSync('credentials.json', JSON.stringify(rr, null, 2));
+                await saveToken(rr as IRefreshTokenResult);
+                return rr;
+            } catch (err) {
+                const errData = get(err, 'response.data');
+                if (errData && errData.error === 'authorization_pending') {
+                    await delay(opt.pollTime || 1000);
+                    continue;
+                }
             }
-            ///console.log(rr);
-            //const { access_token, refresh_token } = rr;
-            //fs.writeFileSync('credentials.json', JSON.stringify(rr, null, 2));
-            await saveToken(rr);
-            return rr;
         }
     }
 
