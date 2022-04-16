@@ -4,7 +4,8 @@
 //return rootUrl + '?' + querystring.stringify(opts);
 //'https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&response_type=code&client_id=client_id&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob'
 
-import axios, {Method} from 'axios';
+import axios, { Method } from 'axios';
+import {getFormData} from './util'
 
 export interface IGClientCreds {
     client_id: string;
@@ -55,16 +56,7 @@ export interface IGoogleUpdateParms {
     responseDateTimeRenderOption?: 'FORMATTED_STRING'|'SERIAL_NUMBER';
 }
 
-export function getFormData(obj: { [id: string]: any }): (string|null) {
-    if (!obj) return null;
-    const keys = Object.keys(obj);
-    const data = keys.map(key => {
-        let v = obj[key];
-        if (typeof v === 'number') v = '' + v;
-        return `${key}=${encodeURIComponent(obj[key])}`;
-    }).join('&')
-    return data;
-}
+
 
 interface IIdRange {
     id: string; range: string;

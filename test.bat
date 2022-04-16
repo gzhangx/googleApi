@@ -1,2 +1,2 @@
 call node_modules\.bin\tsc
-call node lib\googleApi
+call node lib\tests\mstest
