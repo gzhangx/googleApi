@@ -68,6 +68,7 @@ async function test() {
         const std = d[5].split(/[,，]+/);
         console.log(d[5],std)
         const doAdd = (name: string) => {
+            name = name.trim();
             acc[name] = (acc[name] || 0) + 1;
         }
         doAdd(leader);
@@ -76,6 +77,13 @@ async function test() {
     }, {
     } as { [name: string]: number });
     console.log(summary)
+    const updateData = Object.keys(summary).sort().map(name => {
+        return [name, summary[name].toString()];
+    })
+    console.log(updateData);
+    const creatRes = await sheet.createSheet('Summary');
+    console.log(`create res`, creatRes);
+    await sheet.updateRange('Summary', 'A1', `B${updateData.length }`, updateData);
 }
 
 test().catch(err => {
