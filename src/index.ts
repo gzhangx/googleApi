@@ -11,8 +11,8 @@ import * as msdir from './msGraph/msdir'
 import * as msExcell from './msGraph/msExcell'
 
 const msGraph = {
-    ...msauth,
-    ...msdir,
-    ...msExcell
+    msauth,
+    msdir,
+    msExcell
 }
 export { getFormData, google, msGraph }

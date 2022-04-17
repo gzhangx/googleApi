@@ -20,7 +20,7 @@ async function test() {
     }
     console.log('with creds', tenantClientInfo)
     if (!refresh_token) {
-        const ar = all.msGraph.getAuth({
+        const ar = all.msGraph.msauth.getAuth({
             ...tenantClientInfo,
             promptUser: (msg, info) => console.log(msg, info),
             saveToken: async tk => {
@@ -54,7 +54,7 @@ async function test() {
         fileName:'三福探访记录.xlsx'
     };    
     console.log('getting sheet')
-    const sheet = await all.msGraph.getMsExcel(tenantClientInfo, prm, opt);
+    const sheet = await all.msGraph.msExcell.getMsExcel(tenantClientInfo, prm, opt);
     const info = await sheet.getWorkSheets()
     console.log(info);
     const data = await sheet.readRange('Sheet1', 'A1', 'G1');
