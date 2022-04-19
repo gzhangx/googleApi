@@ -238,17 +238,24 @@ export function axiosErrorProcessing(err: any) : string {
     return msg;
 }
 
+
+const connCacche = {
+
+} as {[key:string]:ITokenInfo};
 export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {    
     async function getToken(): Promise<ITokenInfo> {
         const now = new Date().getTime();
-        opt.logger(`debugrm getMsGraphConn now=${now} exp=${opt.tokenInfo?.expires_on}`);
-        if (!opt.tokenInfo || opt.tokenInfo.expires_on < now / 1000) {
+        const cacheKey = `${opt.tenantClientInfo.tenantId}-${opt.tenantClientInfo.client_id}`;
+        const optTokenInfo = connCacche[cacheKey];
+        opt.logger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
+        if (!optTokenInfo || optTokenInfo.expires_on < now / 1000) {
             const { getAccessToken } = getDefaultAuth(opt.tenantClientInfo);
             opt.logger('getting new token');
-            const tok = await getAccessToken();
-            opt.tokenInfo = tok;
+            const tok = await getAccessToken();            
+            connCacche[cacheKey] = tok;
+            return tok;
         }
-        return opt.tokenInfo;
+        return optTokenInfo;
     }
 
     async function getHeaders(): Promise<AxiosRequestConfig> {
