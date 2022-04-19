@@ -131,7 +131,7 @@ async function testFast() {
     sheetRes.values[50][0] = 'testtestesfaasdfadfaf';
     await xlsOps.updateRange('Table B', 'A1', `J${sheetRes.values.length}`, sheetRes.values);
 }
-testFast().catch(err => {
+test().catch(err => {
     console.log('error happened');
     console.log(get(err, 'response.data') || err)
     console.log('error happened end');

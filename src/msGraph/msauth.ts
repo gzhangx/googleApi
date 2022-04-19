@@ -24,7 +24,7 @@ export interface IAuthOpt extends IMsGraphCreds {
 export interface IRefreshTokenResult {
     token_type: 'Bearer';
     scope: string;
-    expires_in: string;
+    expires_in: number;
     ext_expires_in: string;
     expires_on: string;
     not_before: string;
@@ -154,7 +154,7 @@ export function getAuth(opt: IAuthOpt) {
         }
     }
 
-    async function getAccessToken(): Promise<ITokenInfo> {
+    async function getAccessToken(): Promise<IRefreshTokenResult> {
         const { refresh_token } = opt;
         const form = {
             scope,
@@ -162,7 +162,7 @@ export function getAuth(opt: IAuthOpt) {
             grant_type: 'refresh_token',
             client_id
         };
-        const ac = await doPost(queryCodeurl, form) as ITokenInfo;
+        const ac = await doPost(queryCodeurl, form) as IRefreshTokenResult;
 
         return ac;
     }
@@ -190,7 +190,6 @@ export function getDefaultAuth(opt: IMsGraphCreds) {
 
 export interface IMsGraphConn {
     tenantClientInfo: IMsGraphCreds;
-    tokenInfo?: ITokenInfo;
     logger: (msg: string) => void;
 }
 
@@ -211,7 +210,6 @@ export type ILogger = (msg: string) => void;
 export async function getDefaultMsGraphConn(tenantClientInfo: IMsGraphCreds, logger: ILogger = x=>console.log(x)): Promise<IMsGraphOps> {
     return getMsGraphConn({
         tenantClientInfo,
-        tokenInfo: null,
         logger,
     });
 }
@@ -244,16 +242,21 @@ const connCacche = {
 } as {[key:string]:ITokenInfo};
 export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {    
     async function getToken(): Promise<ITokenInfo> {
-        const now = new Date().getTime();
+        const now = Math.round(new Date().getTime()/1000);
         const cacheKey = `${opt.tenantClientInfo.tenantId}-${opt.tenantClientInfo.client_id}`;
         const optTokenInfo = connCacche[cacheKey];
         opt.logger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
-        if (!optTokenInfo || optTokenInfo.expires_on < now / 1000) {
+        if (!optTokenInfo || optTokenInfo.expires_on < now) {
             const { getAccessToken } = getDefaultAuth(opt.tenantClientInfo);
             opt.logger('getting new token');
-            const tok = await getAccessToken();            
-            connCacche[cacheKey] = tok;
-            return tok;
+            const tok = await getAccessToken();
+            console.log('------------------------>', tok)
+            const retToken = {
+                access_token: tok.access_token,
+                expires_on: tok.expires_in + now,
+            };
+            connCacche[cacheKey] = retToken;
+            return retToken;
         }
         return optTokenInfo;
     }
