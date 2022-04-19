@@ -49,7 +49,7 @@ export interface ICopyStatusRes {
     status: 'inProgress' | 'completed'
 }
 
-export const getDriveUrl = (driveId: string, path: string) => `drives/${driveId}/root:/${encodeURIComponent(path.replace(/['`;\\",()&^$#!%*=+[\]{}|:<>?]/g, ''))}`;
+export const getDriveUrl = (driveId: string, path: string) => `drives/${driveId}/root:/${encodeURIComponent(path.replace(/[\\"|*<>?]/g, ''))}`;
 export const getDriveAndByIdUrl = (driveId: string, itemId: string) => `drives/${driveId}/items/${itemId}`;
 export async function getMsDir(creds: IMsGraphCreds, prms: IMsGraphDirPrms): Promise<IMsDirOps> {
     const ops = await getDefaultMsGraphConn(creds, prms.logger);
