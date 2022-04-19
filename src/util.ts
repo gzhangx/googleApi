@@ -6,3 +6,9 @@ export function getFormData(obj: { [id: string]: any }): (string|null) {
     }).join('&')
     return data;
 }
+
+export function sleep(ms: number) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms); 
+    });
+}

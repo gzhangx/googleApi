@@ -1,5 +1,14 @@
 import { getDefaultMsGraphConn, ILogger, IMsGraphCreds, IDriveItemInfo } from "./msauth";
-
+import { sleep } from '../util'
+import axios from 'axios'
+import * as path from 'path'
+import { delay, toPath } from "lodash";
+interface IParentReference  {
+    driveId: string;
+    driveType?: string;
+    id: string;
+    path: string;
+}
 
 export interface IMsDirOps {
     //doGet: (itemId: string, action: string) => Promise<any>;
@@ -9,6 +18,12 @@ export interface IMsDirOps {
     //getFileById: (itemId: string) => Promise<Buffer>;
     getFileByPath: (itemId: string) => Promise<Buffer>;
     createDir: (path: string, name: string) => Promise<IDirCreateResponse>;
+    getFileInfoByPath:(fname: string)=> Promise<IFileCreateResponse>;
+    deleteItem: (itemId: string) => Promise<void>;
+    copyItem: (parentInfo: IParentReference, itemId: string, toName:string) => Promise<ICopyItemResp>;
+    moveItem: (itemId: string, update: IMoveItemResp) => Promise<IMoveItemResp>;
+    copyItemByName: (fname: string, toName: string, delayMs?: number)=>Promise<string>;
+    getDriveAndByIdUrl: (driveId: string, itemId: string) => string;
     driveId: string;
 }
 
@@ -16,6 +31,22 @@ export interface IMsGraphDirPrms {
     logger: ILogger;
     sharedUrl?: string;
     driveId?: string;
+}
+
+export interface IMoveItemResp {
+    parentReference?:IParentReference;
+    name: string;
+}
+
+interface ICopyItemResp {
+    checkUrl: string;
+}
+
+export interface ICopyStatusRes {
+    '@odata.context': string;
+    percentageComplete: number;
+    resourceId: string;
+    status: 'inProgress' | 'completed'
 }
 
 export const getDriveUrl = (driveId: string, path: string) => `drives/${driveId}/root:/${encodeURIComponent(path.replace(/['`;\\",()&^$#!%*=+[\]{}|:<>?]/g, ''))}`;
@@ -77,6 +108,55 @@ export async function getMsDir(creds: IMsGraphCreds, prms: IMsGraphDirPrms): Pro
         });
     }
 
+    async function getFileInfoByPath(fname: string) : Promise<IFileCreateResponse> {
+        return ops.doGet(`${getDriveUrl(driveId, fname)}`);
+    }
+    async function deleteItem(itemId: string) :Promise<void> {
+        return ops.doDelete(`${getDriveAndByIdUrl(driveId, itemId)}`);
+    }
+    async function copyItem(parentInfo: IParentReference, itemId: string, toName: string): Promise<ICopyItemResp> {
+        const postData = {
+            parentReference: {
+                driveId,
+                id: parentInfo.id,
+                path: parentInfo.path,
+            },
+            name: toName,
+        };
+        const headers = await ops.getHeaders();
+        return axios.post(ops.getMsGraphBaseUrl(`${getDriveAndByIdUrl(driveId, itemId)}/copy?@microsoft.graph.conflictBehavior=rename`), postData, headers).then(res => {
+            //console.log(res);
+            return {
+                checkUrl: res.headers.location,
+            }
+        })        
+    }
+
+    async function copyItemByName(fname: string, toName: string, delayMs?: number) {
+        if (!delayMs || delayMs < 0) delayMs = 100;
+        const info = await getFileInfoByPath(fname);
+        const toPath = path.dirname(toName);
+        const toNameFile = path.basename(toName);
+        console.log(`to path ${toPath}, to file=${toNameFile}`);
+        const cpyRes = await copyItem({
+            driveId: info.parentReference.driveId,
+            path: toPath,
+            id: '',
+        }, info.id, toNameFile);
+
+        while (true) {            
+            const waitRes = (await axios.get(cpyRes.checkUrl)).data as ICopyStatusRes;
+            if (waitRes.status === 'completed') {
+                return waitRes.resourceId;
+            }
+            await sleep(delayMs)
+        }
+    }
+
+    async function moveItem(itemId: string, update:IMoveItemResp) :Promise<IMoveItemResp> {
+        return ops.doPatch(`${getDriveAndByIdUrl(driveId, itemId)}`, update);
+    }
+
     return {
         //doGet,
         //doPost,
@@ -85,6 +165,12 @@ export async function getMsDir(creds: IMsGraphCreds, prms: IMsGraphDirPrms): Pro
         //getFileById,
         getFileByPath,
         createDir,
+        getFileInfoByPath,
+        deleteItem,
+        copyItem,
+        moveItem,
+        getDriveAndByIdUrl,
+        copyItemByName,
         driveId,
     }
 
@@ -110,11 +196,7 @@ export interface IDirCreateResponse {
             displayName: string;
         };
     };
-    parentReference: {
-        driveId: string;
-        driveType: string; //"business",
-        id: string;
-    };
+    parentReference: IParentReference;
     fileSystemInfo: {
         createdDateTime: string;
         lastModifiedDateTime: string;
@@ -170,12 +252,7 @@ interface IFileCreateResponse {
             displayName: string;
         };
     };
-    parentReference: {
-        driveId: string;
-        driveType: string;
-        id: string;
-        path: string;
-    },
+    parentReference: IParentReference,
     file: {
         mimeType: string; //'text/plain',
         hashes: { quickXorHash: string; };

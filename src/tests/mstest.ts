@@ -4,8 +4,9 @@ import * as all from '../index'
 import { IMsGraphCreds } from '../msGraph/msauth';
 import { IMsGraphDirPrms } from '../msGraph/msdir';
 import { IMsGraphExcelItemOpt } from '../msGraph/msExcell';
+import {get} from 'lodash'
 
-async function test() {
+function getTenantInfo() {
     let refresh_token = '';
     try {
         const refTk = JSON.parse(fs.readFileSync('../testref.txt').toString()) as { refresh_token: string }
@@ -19,7 +20,11 @@ async function test() {
         tenantId:'60387d22-1b13-42a0-8894-208eeafd9e57', //https://portal.azure.com/#home, https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps
     }
     console.log('with creds', tenantClientInfo)
-    if (!refresh_token) {
+    return tenantClientInfo;
+}
+async function test() {
+    const tenantClientInfo: IMsGraphCreds = getTenantInfo();
+    if (!tenantClientInfo.refresh_token) {
         const ar = all.msGraph.msauth.getAuth({
             ...tenantClientInfo,
             promptUser: (msg, info) => console.log(msg, info),
@@ -69,6 +74,7 @@ async function test() {
         console.log(d[5],std)
         const doAdd = (name: string) => {
             name = name.trim();
+            if (!name) return;
             acc[name] = (acc[name] || 0) + 1;
         }
         doAdd(leader);
@@ -83,9 +89,50 @@ async function test() {
     console.log(updateData);
     const creatRes = await sheet.createSheet('Summary');
     console.log(`create res`, creatRes);
-    await sheet.updateRange('Summary', 'A1', `B${updateData.length }`, updateData);
+    await sheet.updateRange('Summary', 'A1', `B${updateData.length}`, updateData);
+    
+    const msdirOps = await all.msGraph.msdir.getMsDir(tenantClientInfo, prm);
+    const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
+    console.log(cpinfo.id);
+    const cpres = await msdirOps.copyItem(cpinfo.parentReference, cpinfo.id, 'testnewDelete.xlsx');
+    console.log(cpres);
+    
 }
 
-test().catch(err => {
-    console.log(err)
+
+async function testFast() {
+    const tenantClientInfo: IMsGraphCreds = getTenantInfo();
+    const prm: IMsGraphDirPrms = {        
+        logger: msg => console.log(msg),
+        sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
+        driveId:'',
+    };
+    const msdirOps = await all.msGraph.msdir.getMsDir(tenantClientInfo, prm);
+    /*
+    const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
+    console.log(cpinfo.id);
+    const cpres = await msdirOps.copyItem({
+        driveId: cpinfo.parentReference.driveId,
+        path: 'Documents/safehouse/safehouseRecords',
+        id:'',
+    }, cpinfo.id, 'testnewDelete.xlsx');
+    console.log(cpres);
+    */
+    
+    const newId = await msdirOps.copyItemByName('Documents/safehouse/empty2022expense.xlsx', 'Documents/safehouse/safehouseRecords/delet1.xlsx')
+    console.log('newFileId is ', newId);
+
+    prm.driveId = msdirOps.driveId;
+    const xlsOps = await all.msGraph.msExcell.getMsExcel(tenantClientInfo, prm, {
+        itemId: newId,        
+    })
+    const sheetRes = await xlsOps.readAll('Table B')
+    console.log(sheetRes.values);
+    sheetRes.values[50][0] = 'testtestesfaasdfadfaf';
+    await xlsOps.updateRange('Table B', 'A1', `J${sheetRes.values.length}`, sheetRes.values);
+}
+testFast().catch(err => {
+    console.log('error happened');
+    console.log(get(err, 'response.data') || err)
+    console.log('error happened end');
 })

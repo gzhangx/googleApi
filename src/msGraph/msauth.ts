@@ -195,10 +195,14 @@ export interface IMsGraphConn {
 }
 
 export interface IMsGraphOps {
+    getMsGraphBaseUrl: (urlPostFix: string) => string;
+    getHeaders: () => Promise<AxiosRequestConfig>;
+    parseResp: (r: { data: any }) => any;
     doGet: (urlPostFix: string, fmt?: (cfg: AxiosRequestConfig) => AxiosRequestConfig) => Promise<any>;
     doPost: (urlPostFix: string, data: object) => Promise<any>;
     doPut: (urlPostFix: string, data: object) => Promise<any>;
     doPatch: (urlPostFix: string, data: object) => Promise<any>;
+    doDelete: (urlPostFix: string) => Promise<any>;
     getSharedItemInfo: (sharedUrl: string) => Promise<IDriveItemInfo>;
 }
 
@@ -269,34 +273,42 @@ export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {
             throw new GGraphError(message);
         }
     }
+
+    const getMsGraphBaseUrl = (urlPostFix: string) => `${ROOT_URL}/${urlPostFix}`;
+
     async function doGet(urlPostFix: string, fmt: (cfg: AxiosRequestConfig) => AxiosRequestConfig = x => x): Promise<any> {
-        const uri = getUserUrl(urlPostFix);
+        const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`GET ${uri}`);
         return await Axios.get(uri, fmt(await getHeaders()))
             .then(parseResp).catch(errProc(uri));
     }
 
     async function doPost(urlPostFix: string, data: object) {
-        const uri = getUserUrl(urlPostFix);
+        const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`POST ${uri}`);
         return Axios.post(uri, data, await getHeaders()).then(parseResp).catch(errProc(uri));
     }
 
     async function doPut(urlPostFix: string, data: object) {
-        const uri = getUserUrl(urlPostFix);
+        const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PUT ${uri}`);
         return Axios.put(uri, data, await getHeaders()).then(parseResp).catch(errProc(uri));
     }
 
     async function doPatch(urlPostFix: string, data: object) {
-        const uri = getUserUrl(urlPostFix);
+        const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
         return Axios.patch(uri, data, await getHeaders()).then(parseResp).catch(errProc(uri));
     }
 
+    async function doDelete(urlPostFix: string) {
+        const uri = getMsGraphBaseUrl(urlPostFix);
+        opt.logger(`PATCH ${uri}`);
+        return Axios.delete(uri, await getHeaders()).then(parseResp).catch(errProc(uri));
+    }
+
     const ROOT_URL = 'https://graph.microsoft.com/v1.0';
-    //const getUserUrl = (urlPostFix: string) => `${ROOT_URL}/users('${opt.tenantClientInfo.userId}')/${urlPostFix}`;
-    const getUserUrl = (urlPostFix: string) => `${ROOT_URL}/${urlPostFix}`;
+    //const getMsGraphBaseUrl = (urlPostFix: string) => `${ROOT_URL}/users('${opt.tenantClientInfo.userId}')/${urlPostFix}`;    
 
     async function getSharedItemInfo(sharedUrl: string): Promise<IDriveItemInfo> {
         return doGet(`shares/${encodeSharedUrl(sharedUrl)}/driveItem`).then((r: IDriveItemInfo) => {
@@ -304,10 +316,14 @@ export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {
         });        
     }
     return {
+        getMsGraphBaseUrl,
+        getHeaders,
+        parseResp,
         doGet,
         doPost,
         doPut,
         doPatch,
+        doDelete,
         getSharedItemInfo,
     }
 }
