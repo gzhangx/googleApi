@@ -54,8 +54,8 @@ async function delay(ms: number) {
 
 export class GGraphError extends Error {
     requestUrl: string;
-    constructor(message: string, requestUrl:string) {
-        super(message)
+    constructor(requestUrl:string) {
+        super('')
         this.requestUrl = requestUrl;
     }
 }
@@ -278,11 +278,12 @@ export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {
         return r.data;
     }
 
-    function errProc(context: string) {
+    function errProc(errTrace: GGraphError) {
         return err => {
             const message = axiosErrorProcessing(err);
-            opt.logger(`error on ${context}: ${message}`);
-            throw new GGraphError(message, context);
+            opt.logger(`error on ${errTrace.requestUrl}: ${message}`);
+            errTrace.message = err.message;
+            throw errTrace;
         }
     }
 
@@ -292,31 +293,31 @@ export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`GET ${uri}`);
         return await Axios.get(uri, fmt(await getHeaders()))
-            .then(parseResp).catch(errProc(uri));
+            .then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPost(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`POST ${uri}`);
-        return Axios.post(uri, data, await getHeaders()).then(parseResp).catch(errProc(uri));
+        return Axios.post(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPut(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PUT ${uri}`);
-        return Axios.put(uri, data, await getHeaders()).then(parseResp).catch(errProc(uri));
+        return Axios.put(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPatch(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
-        return Axios.patch(uri, data, await getHeaders()).then(parseResp).catch(errProc(uri));
+        return Axios.patch(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doDelete(urlPostFix: string) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
-        return Axios.delete(uri, await getHeaders()).then(parseResp).catch(errProc(uri));
+        return Axios.delete(uri, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     const ROOT_URL = 'https://graph.microsoft.com/v1.0';
