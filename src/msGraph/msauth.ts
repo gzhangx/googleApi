@@ -52,11 +52,13 @@ async function delay(ms: number) {
     });
 }
 
-export function GGraphError(message = "") {
-    this.name = "GGraphError";
-    this.message = message;
+export class GGraphError extends Error {
+    requestUrl: string;
+    constructor(message: string, requestUrl:string) {
+        super(message)
+        this.requestUrl = requestUrl;
+    }
 }
-GGraphError.prototype = Error.prototype;
 
 export function encodeSharedUrl(sharingUrl: string): string {
     //see https://docs.microsoft.com/en-us/graph/api/shares-get?view=graph-rest-1.0&irgwc=1&OCID=AID2200057_aff_7593_1243925&tduid=(ir__ksd0kmgl9ckf6nyskg6fwnqce32xt3umkhw9f9gn00)(7593)(1243925)(je6NUbpObpQ-XTpQa0NuXTfWX1VU38TMYg)()&irclickid=_ksd0kmgl9ckf6nyskg6fwnqce32xt3umkhw9f9gn00&tabs=http#encoding-sharing-urls&ranMID=24542&ranEAID=je6NUbpObpQ&ranSiteID=je6NUbpObpQ-XTpQa0NuXTfWX1VU38TMYg&epi=je6NUbpObpQ-XTpQa0NuXTfWX1VU38TMYg   
@@ -280,7 +282,7 @@ export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {
         return err => {
             const message = axiosErrorProcessing(err);
             opt.logger(`error on ${context}: ${message}`);
-            throw new GGraphError(message);
+            throw new GGraphError(message, context);
         }
     }
 
