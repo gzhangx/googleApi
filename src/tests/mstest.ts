@@ -17,7 +17,8 @@ function getTenantInfo() {
     const tenantClientInfo: IMsGraphCreds = {
         client_id: '72f543e0-817c-4939-8925-898b1048762c',
         refresh_token,
-        tenantId:'60387d22-1b13-42a0-8894-208eeafd9e57', //https://portal.azure.com/#home, https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps
+        tenantId: '60387d22-1b13-42a0-8894-208eeafd9e57', //https://portal.azure.com/#home, https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps
+        logger: (...msg) => console.log(...msg),
     }
     console.log('with creds', tenantClientInfo)
     return tenantClientInfo;
@@ -50,10 +51,7 @@ async function test() {
         }
     }
     const prm: IMsGraphDirPrms = {  
-        creds: {
-            logger: msg => console.log(msg),
-            tenantClientInfo,
-        },
+        creds: tenantClientInfo,
         sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
         driveId:'',
     };
@@ -97,7 +95,12 @@ async function test() {
     const msdirOps = await all.msGraph.msdir.getMsDir(prm);
     const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
     console.log(cpinfo.id);
-    const cpres = await msdirOps.copyItem(cpinfo.parentReference, cpinfo.id, 'testnewDelete.xlsx');
+console.log(cpinfo.parentReference)
+    const cpres = await msdirOps.copyItem({
+        ...cpinfo.parentReference,
+        id: '',
+        path: cpinfo.parentReference.path+'/temptest'
+    }, cpinfo.id, 'testnewDelete.xlsx');
     console.log(cpres);
     
 }
@@ -106,10 +109,7 @@ async function test() {
 async function testFast() {
     const tenantClientInfo: IMsGraphCreds = getTenantInfo();
     const prm: IMsGraphDirPrms = {      
-        creds: {
-            logger: msg => console.log(msg),
-            tenantClientInfo,
-        },
+        creds: tenantClientInfo,        
         sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
         driveId:'',
     };

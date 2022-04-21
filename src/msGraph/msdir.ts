@@ -1,4 +1,4 @@
-import { ILogger, IMsGraphCreds, IMsGraphConnPrm, getMsGraphConn } from "./msauth";
+import { ILogger, IMsGraphCreds, getMsGraphConn } from "./msauth";
 import { sleep } from '../util'
 import axios from 'axios'
 import * as path from 'path'
@@ -28,7 +28,7 @@ export interface IMsDirOps {
 }
 
 export interface IMsGraphDirPrms {
-    creds: IMsGraphConnPrm;
+    creds: IMsGraphCreds;
     sharedUrl?: string;
     driveId?: string;
 }

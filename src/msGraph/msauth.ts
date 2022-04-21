@@ -3,19 +3,22 @@ import Axios, { AxiosRequestConfig } from "axios";
 import { get } from 'lodash';
 import { getFormData} from '../util'
 
+export type ILogger = (...args: any[]) => void;
+
 export interface IMsGraphCreds {
     //userId: string;
     tenantId: string;
     client_id: string;
 
     refresh_token: string;
+    logger: ILogger;
 }
 
 export interface IAuthOpt extends IMsGraphCreds {
     //tenantId: string;
     //client_id: string;
     //refresh_token: string; //optional
-    promptUser: (msg: string|object, info:object) => void;
+    promptUser: (msg: string, info: ICodeWaitInfo) => void;
     saveToken: (token: IRefreshTokenResult) => Promise<void>;
     scope?: string;
     pollTime?: number;
@@ -35,8 +38,12 @@ export interface IRefreshTokenResult {
 }
 
 interface ICodeWaitInfo {
-    device_code: string;
-    message: object;
+    user_code: string;  //'short user string',
+    device_code: string; //long device code
+    verification_uri: string; //'https://microsoft.com/devicelogin',
+    expires_in: number; //900
+    interval: number; //5
+    message: string; //'To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code user_code to authenticate.'
 }
 
 export interface ITokenInfo {
@@ -98,7 +105,7 @@ export function getAuth(opt: IAuthOpt) {
         message: 'client_id required'
     }
 
-    const promptUser = opt.promptUser || console.log;
+    const promptUser = opt.promptUser || ((msg: string, info: ICodeWaitInfo)=>console.log(msg,info));
     const saveToken = opt.saveToken;
 
     const scope = opt.scope || 'Mail.Read openid profile User.Read email Files.ReadWrite.All Files.ReadWrite Files.Read Files.Read.All Files.Read.Selected Files.ReadWrite.AppFolder Files.ReadWrite.Selected';
@@ -116,17 +123,15 @@ export function getAuth(opt: IAuthOpt) {
             return (r.data);
         });
     }
-    async function getRefreshToken() :Promise<IRefreshTokenResult> {        
+
+    async function getRefreshTokenPart1GetCodeWaitInfo() {
         const codeWaitInfo = await doPost(`${baseQueryUrl}/devicecode`, {
             scope,
             client_id,
         }) as ICodeWaitInfo;
-
-        //const user_code = codeWaitInfo.user_code; // presented to the user
-        const deviceCode = codeWaitInfo.device_code; // internal code to identify the user
-        //const url = codeWaitInfo.verification_url; // URL the user needs to visit & paste in the code
-        const message = codeWaitInfo.message; //send user code to url
-        await promptUser(message, codeWaitInfo);
+        return codeWaitInfo;
+    }
+    async function getRefreshTokenPartFinish(deviceCode: string) {
         while (true) {
             try {
                 const rr = await doPost(queryCodeurl, {
@@ -155,6 +160,16 @@ export function getAuth(opt: IAuthOpt) {
             }
         }
     }
+    async function getRefreshToken() :Promise<IRefreshTokenResult> {        
+        const codeWaitInfo = await getRefreshTokenPart1GetCodeWaitInfo();
+
+        //const user_code = codeWaitInfo.user_code; // presented to the user
+        const deviceCode = codeWaitInfo.device_code; // internal code to identify the user
+        //const url = codeWaitInfo.verification_url; // URL the user needs to visit & paste in the code
+        const message = codeWaitInfo.message; //send user code to url
+        await promptUser(message, codeWaitInfo);
+        return await getRefreshTokenPartFinish(deviceCode);
+    }
 
     async function getAccessToken(): Promise<IRefreshTokenResult> {
         const { refresh_token } = opt;
@@ -180,20 +195,15 @@ export function getAuth(opt: IAuthOpt) {
 export function getDefaultAuth(opt: IMsGraphCreds) {
     const { tenantId, client_id, refresh_token } = opt;
     return getAuth({
-        tenantId,
-        client_id,
-        refresh_token,
+        //tenantId,
+        //client_id,
+        //refresh_token,
+        ...opt,
         promptUser: msg => console.log(msg),
         saveToken: async res => console.log(res),        
     });
 }
 
-
-
-export interface IMsGraphConnPrm {
-    tenantClientInfo: IMsGraphCreds;
-    logger: ILogger;
-}
 
 export interface IMsGraphOps {
     getMsGraphBaseUrl: (urlPostFix: string) => string;
@@ -206,8 +216,6 @@ export interface IMsGraphOps {
     doDelete: (urlPostFix: string) => Promise<any>;
     getSharedItemInfo: (sharedUrl: string) => Promise<IDriveItemInfo>;
 }
-
-export type ILogger = (...args: any[]) => void;
 
 
 export function axiosErrorProcessing(err: any) : string {
@@ -236,14 +244,14 @@ export function axiosErrorProcessing(err: any) : string {
 const connCacche = {
 
 } as {[key:string]:ITokenInfo};
-export async function getMsGraphConn(opt: IMsGraphConnPrm): Promise<IMsGraphOps> {    
+export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {    
     async function getToken(): Promise<ITokenInfo> {
         const now = Math.round(new Date().getTime()/1000);
-        const cacheKey = `${opt.tenantClientInfo.tenantId}-${opt.tenantClientInfo.client_id}`;
+        const cacheKey = `${opt.tenantId}-${opt.client_id}`;
         const optTokenInfo = connCacche[cacheKey];
         opt.logger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
         if (!optTokenInfo || optTokenInfo.expires_on < now) {
-            const { getAccessToken } = getDefaultAuth(opt.tenantClientInfo);
+            const { getAccessToken } = getDefaultAuth(opt);
             opt.logger('getting new token');
             const tok = await getAccessToken();
             console.log('------------------------>', tok)
