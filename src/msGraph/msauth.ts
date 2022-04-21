@@ -126,7 +126,7 @@ export function getAuth(opt: IMsGraphCreds) {
         });
     }
 
-    const scope = opt.scope || 'Mail.Read openid profile User.Read email Files.ReadWrite.All Files.ReadWrite Files.Read Files.Read.All Files.Read.Selected Files.ReadWrite.AppFolder Files.ReadWrite.Selected';
+    const scope = opt.scope || 'offline_access Mail.Read openid profile User.Read email Files.ReadWrite.All Files.ReadWrite Files.Read Files.Read.All Files.Read.Selected Files.ReadWrite.AppFolder Files.ReadWrite.Selected';
     async function getRefreshTokenPart1GetCodeWaitInfo() {        
         const codeWaitInfo = await doPost(`${baseQueryUrl}/devicecode`, {
             scope,
