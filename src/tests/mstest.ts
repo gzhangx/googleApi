@@ -49,8 +49,11 @@ async function test() {
             return;
         }
     }
-    const prm: IMsGraphDirPrms = {        
-        logger: msg => console.log(msg),
+    const prm: IMsGraphDirPrms = {  
+        creds: {
+            logger: msg => console.log(msg),
+            tenantClientInfo,
+        },
         sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
         driveId:'',
     };
@@ -59,7 +62,7 @@ async function test() {
         fileName:'三福探访记录.xlsx'
     };    
     console.log('getting sheet')
-    const sheet = await all.msGraph.msExcell.getMsExcel(tenantClientInfo, prm, opt);
+    const sheet = await all.msGraph.msExcell.getMsExcel(prm, opt);
     const info = await sheet.getWorkSheets()
     console.log(info);
     const data = await sheet.readRange('Sheet1', 'A1', 'G1');
@@ -91,7 +94,7 @@ async function test() {
     console.log(`create res`, creatRes);
     await sheet.updateRange('Summary', 'A1', `B${updateData.length}`, updateData);
     
-    const msdirOps = await all.msGraph.msdir.getMsDir(tenantClientInfo, prm);
+    const msdirOps = await all.msGraph.msdir.getMsDir(prm);
     const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
     console.log(cpinfo.id);
     const cpres = await msdirOps.copyItem(cpinfo.parentReference, cpinfo.id, 'testnewDelete.xlsx');
@@ -102,12 +105,15 @@ async function test() {
 
 async function testFast() {
     const tenantClientInfo: IMsGraphCreds = getTenantInfo();
-    const prm: IMsGraphDirPrms = {        
-        logger: msg => console.log(msg),
+    const prm: IMsGraphDirPrms = {      
+        creds: {
+            logger: msg => console.log(msg),
+            tenantClientInfo,
+        },
         sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
         driveId:'',
     };
-    const msdirOps = await all.msGraph.msdir.getMsDir(tenantClientInfo, prm);
+    const msdirOps = await all.msGraph.msdir.getMsDir(prm);
     /*
     const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
     console.log(cpinfo.id);
@@ -123,7 +129,7 @@ async function testFast() {
     console.log('newFileId is ', newId);
 
     prm.driveId = msdirOps.driveId;
-    const xlsOps = await all.msGraph.msExcell.getMsExcel(tenantClientInfo, prm, {
+    const xlsOps = await all.msGraph.msExcell.getMsExcel(prm, {
         itemId: newId,        
     })
     const sheetRes = await xlsOps.readAll('Table B')

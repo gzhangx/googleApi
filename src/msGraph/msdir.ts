@@ -1,4 +1,4 @@
-import { getDefaultMsGraphConn, ILogger, IMsGraphCreds, IDriveItemInfo } from "./msauth";
+import { ILogger, IMsGraphCreds, IMsGraphConnPrm, getMsGraphConn } from "./msauth";
 import { sleep } from '../util'
 import axios from 'axios'
 import * as path from 'path'
@@ -28,7 +28,7 @@ export interface IMsDirOps {
 }
 
 export interface IMsGraphDirPrms {
-    logger: ILogger;
+    creds: IMsGraphConnPrm;
     sharedUrl?: string;
     driveId?: string;
 }
@@ -51,8 +51,8 @@ export interface ICopyStatusRes {
 
 export const getDriveUrl = (driveId: string, path: string) => `drives/${driveId}/root:/${encodeURIComponent(path.replace(/[\\"|*<>?]/g, ''))}`;
 export const getDriveAndByIdUrl = (driveId: string, itemId: string) => `drives/${driveId}/items/${itemId}`;
-export async function getMsDir(creds: IMsGraphCreds, prms: IMsGraphDirPrms): Promise<IMsDirOps> {
-    const ops = await getDefaultMsGraphConn(creds, prms.logger);
+export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
+    const ops = await getMsGraphConn(prms.creds);
     
     // const getPostFix = (itemId: string, action: string) => `/drive/items('${itemId}')/${action}`    
     // async function doGet(itemId: string, action: string) : Promise<any> {
@@ -77,7 +77,7 @@ export async function getMsDir(creds: IMsGraphCreds, prms: IMsGraphDirPrms): Pro
         const itmInf = await ops.getSharedItemInfo(prms.sharedUrl);
         if (!itmInf.parentReference) {
             const message = `bad sharedUrl ${prms.sharedUrl}`;
-            prms.logger(message);
+            prms.creds.logger(message);
             throw {
                 message
             };

@@ -1,4 +1,4 @@
-import { IMsGraphCreds, getDefaultMsGraphConn, IDriveItemInfo } from "./msauth";
+import { IMsGraphCreds, getMsGraphConn, IDriveItemInfo } from "./msauth";
 import { IMsGraphDirPrms, getDriveUrl, getDriveAndByIdUrl, getMsDir } from './msdir';
 
 export interface IMsGraphExcelItemOpt {    
@@ -52,26 +52,27 @@ export interface IMsExcelOps {
 }
 
 
-export async function getMsExcel(tenantClientInfo: IMsGraphCreds, prm: IMsGraphDirPrms,opt: IMsGraphExcelItemOpt): Promise<IMsExcelOps> {
-    const ops = await getDefaultMsGraphConn(tenantClientInfo, prm.logger);    
+export async function getMsExcel(prm: IMsGraphDirPrms, opt: IMsGraphExcelItemOpt): Promise<IMsExcelOps> {
+    const logger = prm.creds.logger;
+    const ops = await getMsGraphConn(prm.creds);    
     
     if (!opt.itemId) {
         if (!prm.driveId) {
             if (!prm.sharedUrl) {
                 const error = `Must specify drive or sharedUrl`;
-                prm.logger(error);
+                logger(error);
                 throw {
                     error,
                     message: error,
                 }
             }
-            const dirInfo = await getMsDir(tenantClientInfo, prm);
+            const dirInfo = await getMsDir(prm);
             prm.driveId = dirInfo.driveId;
         }
         const drItmUrl = `${getDriveUrl(prm.driveId, opt.fileName)}`;    
         const r: IDriveItemInfo = await ops.doGet(drItmUrl);
         opt.itemId = r.id;
-        prm.logger(`query id for ${opt.fileName} = ${opt.itemId}`);        
+        logger(`query id for ${opt.fileName} = ${opt.itemId}`);        
     }
     //const getUrl = (postFix: string) => `https://graph.microsoft.com/v1.0/users('${opt.tenantClientInfo.userId}')/drive/items('${opt.itemId}')/workbook/worksheets${postFix}`;
     //const sheetUrl = `drive/items('${opt.itemId}')/workbook/worksheets`;

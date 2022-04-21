@@ -44,7 +44,7 @@ export interface ITokenInfo {
     expires_on: number;
 }
 
-async function delay(ms: number) {
+export async function delay(ms: number) {
     return new Promise(resolve => {            
         setTimeout(() => {
             resolve(null);
@@ -190,9 +190,9 @@ export function getDefaultAuth(opt: IMsGraphCreds) {
 
 
 
-export interface IMsGraphConn {
+export interface IMsGraphConnPrm {
     tenantClientInfo: IMsGraphCreds;
-    logger: (msg: string) => void;
+    logger: ILogger;
 }
 
 export interface IMsGraphOps {
@@ -207,14 +207,8 @@ export interface IMsGraphOps {
     getSharedItemInfo: (sharedUrl: string) => Promise<IDriveItemInfo>;
 }
 
-export type ILogger = (msg: string) => void;
+export type ILogger = (...args: any[]) => void;
 
-export async function getDefaultMsGraphConn(tenantClientInfo: IMsGraphCreds, logger: ILogger = x=>console.log(x)): Promise<IMsGraphOps> {
-    return getMsGraphConn({
-        tenantClientInfo,
-        logger,
-    });
-}
 
 export function axiosErrorProcessing(err: any) : string {
     function doSteps(obj: object, initialMsg: string, steps: string[]) : string {
@@ -242,7 +236,7 @@ export function axiosErrorProcessing(err: any) : string {
 const connCacche = {
 
 } as {[key:string]:ITokenInfo};
-export async function getMsGraphConn(opt: IMsGraphConn): Promise<IMsGraphOps> {    
+export async function getMsGraphConn(opt: IMsGraphConnPrm): Promise<IMsGraphOps> {    
     async function getToken(): Promise<ITokenInfo> {
         const now = Math.round(new Date().getTime()/1000);
         const cacheKey = `${opt.tenantClientInfo.tenantId}-${opt.tenantClientInfo.client_id}`;
