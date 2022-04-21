@@ -37,7 +37,7 @@ export interface IRefreshTokenResult {
     id_token: string;
 }
 
-interface ICodeWaitInfo {
+export interface ICodeWaitInfo {
     user_code: string;  //'short user string',
     device_code: string; //long device code
     verification_uri: string; //'https://microsoft.com/devicelogin',
@@ -124,7 +124,7 @@ export function getAuth(opt: IAuthOpt) {
         });
     }
 
-    async function getRefreshTokenPart1GetCodeWaitInfo() {
+    async function getRefreshTokenPart1GetCodeWaitInfo() {        
         const codeWaitInfo = await doPost(`${baseQueryUrl}/devicecode`, {
             scope,
             client_id,
@@ -140,8 +140,9 @@ export function getAuth(opt: IAuthOpt) {
                     scope,
                     code: deviceCode,
                     client_id
-                });
+                });                
                 if (rr.error === 'authorization_pending') { //this no longer works with axios
+                    opt.logger('Waiting for deviceCode', deviceCode);
                     //await promise.Promise.delay(opt.pollTime || 1000);
                     await delay(opt.pollTime || 1000);
                     continue;
@@ -149,11 +150,13 @@ export function getAuth(opt: IAuthOpt) {
                 ///console.log(rr);
                 //const { access_token, refresh_token } = rr;
                 //fs.writeFileSync('credentials.json', JSON.stringify(rr, null, 2));
+                opt.logger('saving token for deviceCode', deviceCode);
                 await saveToken(rr as IRefreshTokenResult);
                 return rr;
             } catch (err) {
                 const errData = get(err, 'response.data');
                 if (errData && errData.error === 'authorization_pending') {
+                    opt.logger('Waiting for deviceCode', deviceCode);
                     await delay(opt.pollTime || 1000);
                     continue;
                 }
