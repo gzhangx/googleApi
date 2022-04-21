@@ -134,33 +134,39 @@ export function getAuth(opt: IMsGraphCreds) {
         }) as ICodeWaitInfo;
         return codeWaitInfo;
     }
-    async function getRefreshTokenPartFinish(deviceCode: string, saveToken: IRefreshTokenSaveToken, pollTime?: number) {
-        while (true) {
+    async function getRefreshTokenPartFinish(deviceCode: string, saveToken: IRefreshTokenSaveToken, pollTime?: number, maxPollTime?: number): Promise<IRefreshTokenResult> {
+        if (!maxPollTime) maxPollTime = 1000 * 120;
+        if (!pollTime) pollTime = 1000;
+        let totalWait = 0;
+        while (totalWait < maxPollTime) {
             try {
-                const rr = await doPost(queryCodeurl, {
+                const rrOrError = await doPost(queryCodeurl, {
                     grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
                     resource: 'https://graph.microsoft.com',
                     scope,
                     code: deviceCode,
                     client_id
-                });                
-                if (rr.error === 'authorization_pending') { //this no longer works with axios
-                    opt.logger('Waiting for deviceCode', deviceCode);
-                    //await promise.Promise.delay(opt.pollTime || 1000);
-                    await delay(pollTime || 1000);
+                });
+                if (rrOrError.error === 'authorization_pending') { //this no longer works with axios
+                    opt.logger(`Waiting for deviceCode ${totalWait}/${maxPollTime}`, deviceCode);
+                    //await promise.Promise.delay(opt.pollTime || 1000);                    
+                    totalWait += pollTime;
+                    await delay(pollTime);
                     continue;
                 }
+                const rr = rrOrError as IRefreshTokenResult;
                 ///console.log(rr);
                 //const { access_token, refresh_token } = rr;
                 //fs.writeFileSync('credentials.json', JSON.stringify(rr, null, 2));
                 opt.logger('saving token for deviceCode', deviceCode);
-                await saveToken(rr as IRefreshTokenResult);
+                await saveToken(rr);
                 return rr;
             } catch (err) {
                 const errData = get(err, 'response.data');
                 if (errData && errData.error === 'authorization_pending') {
-                    opt.logger('Waiting for deviceCode', deviceCode);
-                    await delay(pollTime || 1000);
+                    opt.logger(`Waiting for deviceCode(err) ${totalWait}/${maxPollTime}`, deviceCode);
+                    await delay(pollTime);
+                    totalWait += pollTime;
                     continue;
                 }
             }
