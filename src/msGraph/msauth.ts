@@ -10,17 +10,20 @@ export interface IMsGraphCreds {
     tenantId: string;
     client_id: string;
 
+    scope?: string;
     refresh_token: string;
     logger: ILogger;
 }
+
+export type IRefreshTokenPromptUser = (msg: string, info: ICodeWaitInfo) => void;
+export type IRefreshTokenSaveToken = (token: IRefreshTokenResult) => Promise<void>;
 
 export interface IAuthOpt extends IMsGraphCreds {
     //tenantId: string;
     //client_id: string;
     //refresh_token: string; //optional
-    promptUser: (msg: string, info: ICodeWaitInfo) => void;
-    saveToken: (token: IRefreshTokenResult) => Promise<void>;
-    scope?: string;
+    //promptUser: (msg: string, info: ICodeWaitInfo) => void;
+    //saveToken: (token: IRefreshTokenResult) => Promise<void>;
     pollTime?: number;
 }
 
@@ -95,7 +98,7 @@ export interface IDriveItemInfo {
     //};
 }
 
-export function getAuth(opt: IAuthOpt) {
+export function getAuth(opt: IMsGraphCreds) {
     const tenantId = opt.tenantId;
     const client_id = opt.client_id;
     if (!tenantId) throw {
@@ -105,10 +108,9 @@ export function getAuth(opt: IAuthOpt) {
         message: 'client_id required'
     }
 
-    const promptUser = opt.promptUser || ((msg: string, info: ICodeWaitInfo)=>console.log(msg,info));
-    const saveToken = opt.saveToken;
-
-    const scope = opt.scope || 'Mail.Read openid profile User.Read email Files.ReadWrite.All Files.ReadWrite Files.Read Files.Read.All Files.Read.Selected Files.ReadWrite.AppFolder Files.ReadWrite.Selected';
+    //const promptUser = opt.promptUser || ((msg: string, info: ICodeWaitInfo)=>console.log(msg,info));
+    //const saveToken = opt.saveToken;
+    
     const baseQueryUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0`;
     const queryCodeurl = `${baseQueryUrl}/token`;
 
@@ -124,6 +126,7 @@ export function getAuth(opt: IAuthOpt) {
         });
     }
 
+    const scope = opt.scope || 'Mail.Read openid profile User.Read email Files.ReadWrite.All Files.ReadWrite Files.Read Files.Read.All Files.Read.Selected Files.ReadWrite.AppFolder Files.ReadWrite.Selected';
     async function getRefreshTokenPart1GetCodeWaitInfo() {        
         const codeWaitInfo = await doPost(`${baseQueryUrl}/devicecode`, {
             scope,
@@ -131,7 +134,7 @@ export function getAuth(opt: IAuthOpt) {
         }) as ICodeWaitInfo;
         return codeWaitInfo;
     }
-    async function getRefreshTokenPartFinish(deviceCode: string) {
+    async function getRefreshTokenPartFinish(deviceCode: string, saveToken: IRefreshTokenSaveToken, pollTime?: number) {
         while (true) {
             try {
                 const rr = await doPost(queryCodeurl, {
@@ -144,7 +147,7 @@ export function getAuth(opt: IAuthOpt) {
                 if (rr.error === 'authorization_pending') { //this no longer works with axios
                     opt.logger('Waiting for deviceCode', deviceCode);
                     //await promise.Promise.delay(opt.pollTime || 1000);
-                    await delay(opt.pollTime || 1000);
+                    await delay(pollTime || 1000);
                     continue;
                 }
                 ///console.log(rr);
@@ -157,13 +160,13 @@ export function getAuth(opt: IAuthOpt) {
                 const errData = get(err, 'response.data');
                 if (errData && errData.error === 'authorization_pending') {
                     opt.logger('Waiting for deviceCode', deviceCode);
-                    await delay(opt.pollTime || 1000);
+                    await delay(pollTime || 1000);
                     continue;
                 }
             }
         }
     }
-    async function getRefreshToken() :Promise<IRefreshTokenResult> {        
+    async function getRefreshToken(saveToken: IRefreshTokenSaveToken, promptUser:IRefreshTokenPromptUser) :Promise<IRefreshTokenResult> {        
         const codeWaitInfo = await getRefreshTokenPart1GetCodeWaitInfo();
 
         //const user_code = codeWaitInfo.user_code; // presented to the user
@@ -171,7 +174,7 @@ export function getAuth(opt: IAuthOpt) {
         //const url = codeWaitInfo.verification_url; // URL the user needs to visit & paste in the code
         const message = codeWaitInfo.message; //send user code to url
         await promptUser(message, codeWaitInfo);
-        return await getRefreshTokenPartFinish(deviceCode);
+        return await getRefreshTokenPartFinish(deviceCode,saveToken);
     }
 
     async function getAccessToken(): Promise<IRefreshTokenResult> {
@@ -197,19 +200,6 @@ export function getAuth(opt: IAuthOpt) {
             getRefreshTokenPartFinish,
         }
     }
-}
-
-
-export function getDefaultAuth(opt: IMsGraphCreds) {
-    const { tenantId, client_id, refresh_token } = opt;
-    return getAuth({
-        //tenantId,
-        //client_id,
-        //refresh_token,
-        ...opt,
-        promptUser: msg => console.log(msg),
-        saveToken: async res => console.log(res),        
-    });
 }
 
 
@@ -259,7 +249,7 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
         const optTokenInfo = connCacche[cacheKey];
         opt.logger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
         if (!optTokenInfo || optTokenInfo.expires_on < now) {
-            const { getAccessToken } = getDefaultAuth(opt);
+            const { getAccessToken } = getAuth(opt);
             opt.logger('getting new token');
             const tok = await getAccessToken();
             console.log('------------------------>', tok)

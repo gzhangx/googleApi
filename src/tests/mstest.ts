@@ -26,18 +26,17 @@ function getTenantInfo() {
 async function test() {
     const tenantClientInfo: IMsGraphCreds = getTenantInfo();
     if (!tenantClientInfo.refresh_token) {
-        const ar = all.msGraph.msauth.getAuth({
-            ...tenantClientInfo,
-            promptUser: (msg, info) => console.log(msg, info),
-            saveToken: async tk => {
-                console.log('got ti', tk);
-                fs.writeFileSync('../testref.txt', JSON.stringify(tk));
-            }
-        });
+        const ar = all.msGraph.msauth.getAuth(tenantClientInfo);
 
         console.log('getting getRefreshToken')
         try {
-            const ast = await ar.getRefreshToken();
+            const ast = await ar.getRefreshToken(
+                async tk => {
+                    console.log('got ti', tk);
+                    fs.writeFileSync('../testref.txt', JSON.stringify(tk));
+                },
+                (msg, inf)=>console.log(msg,inf),
+            );
             console.log(`got getRefreshToken token`, ast);
             tenantClientInfo.refresh_token = ast.refresh_token;
         } catch (err) {
