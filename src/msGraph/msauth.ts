@@ -191,6 +191,11 @@ export function getAuth(opt: IAuthOpt) {
     return {
         getRefreshToken,
         getAccessToken,
+
+        refreshTokenSeperated: {
+            getRefreshTokenPart1GetCodeWaitInfo,
+            getRefreshTokenPartFinish,
+        }
     }
 }
 
