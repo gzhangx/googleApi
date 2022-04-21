@@ -142,7 +142,7 @@ export function getAuth(opt: IMsGraphCreds) {
             try {
                 const rrOrError = await doPost(queryCodeurl, {
                     grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-                    resource: 'https://graph.microsoft.com',
+                    //resource: 'https://graph.microsoft.com',
                     scope,
                     code: deviceCode,
                     client_id
@@ -170,7 +170,7 @@ export function getAuth(opt: IMsGraphCreds) {
                     totalWait += pollTime;
                     continue;
                 }
-                opt.logger('getRefreshTokenPartFinish: other error happened', err);
+                opt.logger('getRefreshTokenPartFinish: other error happened', errData || err);
                 throw err;
             }
         }
