@@ -147,6 +147,7 @@ export function getAuth(opt: IMsGraphCreds) {
                     code: deviceCode,
                     client_id
                 });
+                opt.logger('getRefreshTokenPartFinish got result ', rrOrError);
                 if (rrOrError.error === 'authorization_pending') { //this no longer works with axios
                     opt.logger(`Waiting for deviceCode ${totalWait}/${maxPollTime}`, deviceCode);
                     //await promise.Promise.delay(opt.pollTime || 1000);                    
@@ -169,6 +170,8 @@ export function getAuth(opt: IMsGraphCreds) {
                     totalWait += pollTime;
                     continue;
                 }
+                opt.logger('getRefreshTokenPartFinish: other error happened', err);
+                throw err;
             }
         }
     }
