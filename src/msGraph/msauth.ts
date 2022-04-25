@@ -14,7 +14,7 @@ export interface IMsGraphCreds {
     refresh_token: string;
     logger: ILogger;
     loadTokenCache?: () => Promise<ITokenInfoCache>;
-    saveTokenCache?: () => Promise<void>;
+    saveTokenCache?: (cache: ITokenInfoCache) => Promise<void>;
 }
 
 export type IRefreshTokenPromptUser = (msg: string, info: ICodeWaitInfo) => void;
@@ -279,7 +279,7 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
             connCaccheInfo.cache[cacheKey] = retToken;
             if (opt.saveTokenCache) {
                 opt.logger('saving token cache');
-                await opt.saveTokenCache();
+                await opt.saveTokenCache(connCaccheInfo.cache);
             }
             return retToken;
         }
