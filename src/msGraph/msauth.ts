@@ -13,6 +13,8 @@ export interface IMsGraphCreds {
     scope?: string;
     refresh_token: string;
     logger: ILogger;
+    loadTokenCache?: () => Promise<ITokenInfoCache>;
+    saveTokenCache?: () => Promise<void>;
 }
 
 export type IRefreshTokenPromptUser = (msg: string, info: ICodeWaitInfo) => void;
@@ -52,6 +54,10 @@ export interface ICodeWaitInfo {
 export interface ITokenInfo {
     access_token: string;
     expires_on: number;
+}
+
+interface ITokenInfoCache {
+    [key: string]: ITokenInfo
 }
 
 export async function delay(ms: number) {
@@ -248,14 +254,18 @@ export function axiosErrorProcessing(err: any) : string {
 }
 
 
-const connCacche = {
-
-} as {[key:string]:ITokenInfo};
+const connCaccheInfo = {
+    cache: null as ITokenInfoCache,
+};
 export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {    
     async function getToken(): Promise<ITokenInfo> {
         const now = Math.round(new Date().getTime()/1000);
         const cacheKey = `${opt.tenantId}-${opt.client_id}`;
-        const optTokenInfo = connCacche[cacheKey];
+        if (!connCaccheInfo.cache) {
+            if (opt.loadTokenCache) connCaccheInfo.cache = await opt.loadTokenCache();
+            else connCaccheInfo.cache = {};
+        }
+        const optTokenInfo = connCaccheInfo.cache[cacheKey];
         opt.logger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
         if (!optTokenInfo || optTokenInfo.expires_on < now) {
             const { getAccessToken } = getAuth(opt);
@@ -266,7 +276,11 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
                 access_token: tok.access_token,
                 expires_on: tok.expires_in + now,
             };
-            connCacche[cacheKey] = retToken;
+            connCaccheInfo.cache[cacheKey] = retToken;
+            if (opt.saveTokenCache) {
+                opt.logger('saving token cache');
+                await opt.saveTokenCache();
+            }
             return retToken;
         }
         return optTokenInfo;
