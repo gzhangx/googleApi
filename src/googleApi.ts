@@ -106,9 +106,24 @@ export async function getTokenFromCode(creds: IGClientCreds, code:string, redire
         });
     return tokenBody;
 }
+
+function betterErr(desc: string) {
+    return err => {
+        const webRsp = err.response;
+        if (webRsp) {
+            throw {
+                desc,
+                ...pick(webRsp, ['data', 'status', 'statusText', 'headers', 'config.url'])
+            }
+        }
+        throw err;
+    }
+}
 async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
     const { refresh_token, client_id, client_secret } = creds;
         
+    if (!client_id || !client_secret) throw `doRefresh needs client_id and client_secret in creds`;
+    if (!refresh_token) throw `missing refresh_token from creds`;
     const dataStr = getFormData({
         client_secret,
         client_id,
@@ -118,7 +133,7 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
     const refreshBody = await axios.post('https://oauth2.googleapis.com/token', dataStr,
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {
             return r.data;
-        });
+        }).catch(betterErr(`refreshToken https://oauth2.googleapis.com/token`));
 
     const {
         access_token, expires_in, token_type
@@ -135,16 +150,7 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
             data,
         }).then(r => {
             return (r.data)
-        }).catch(err => {
-            const webRsp = err.response;
-            if (webRsp) {                
-                throw {
-                    desc: `doOps error ${url}`,
-                    ...pick(webRsp, ['data', 'status', 'statusText', 'headers', 'config.url'])
-                }
-            }
-            throw err;
-        });
+        }).catch(betterErr(`doOps error ${url}`));
     }
     const doPost = (id:string, postFix:string, data:any) => doOp('post', id, postFix, data);
     const doBatchUpdate = async (id:string, data:any) => doPost(id, ':batchUpdate', data);

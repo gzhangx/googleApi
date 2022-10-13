@@ -3,6 +3,7 @@ import { pick } from 'lodash';
 
 async function test(d: boolean) {
     const cli = await getClientByEnv('gzperm');
+    console.log('got client')    
     const ops = await cli.getSheetOps('1u_AR8y7iCRPGyDhdOb1cHhjL-vclCIxuLkMhIxd08mU')
     console.log('update val')
     const rrr = await ops.updateValues('Sheet1!A1:A1', [['a1']]);
@@ -127,7 +128,8 @@ async function test(d: boolean) {
 }
 
 test(true).catch(err => {
-    console.log('err', Object.keys(err));
+    if (typeof err !== 'string')
+        console.log('err', Object.keys(err));
     //console.log('err', pick(err.response, ['data', 'status', 'statusText', 'headers', 'config.url']));
     console.log('err dsp', err);
 });
