@@ -5,7 +5,8 @@
 //'https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&response_type=code&client_id=client_id&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob'
 
 import axios, { Method } from 'axios';
-import {getFormData} from './util'
+import { getFormData } from './util'
+import { pick } from 'lodash';
 
 export interface IGClientCreds {
     client_id: string;
@@ -122,18 +123,29 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
     const {
         access_token, expires_in, token_type
     } = refreshBody;
-    const doOp = (op: string, id: string, postFix: string, data?: any) =>
-        axios({
-            url: `https://sheets.googleapis.com/v4/spreadsheets/${id}${postFix}`,
+    const doOp = (op: string, id: string, postFix: string, data?: any) => {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}${postFix}`;
+        return axios({
+            url,
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${access_token}`,
             },
-            method:op as Method,
+            method: op as Method,
             data,
         }).then(r => {
             return (r.data)
-        });        
+        }).catch(err => {
+            const webRsp = err.response;
+            if (webRsp) {                
+                throw {
+                    desc: `doOps error ${url}`,
+                    ...pick(webRsp, ['data', 'status', 'statusText', 'headers', 'config.url'])
+                }
+            }
+            throw err;
+        });
+    }
     const doPost = (id:string, postFix:string, data:any) => doOp('post', id, postFix, data);
     const doBatchUpdate = async (id:string, data:any) => doPost(id, ':batchUpdate', data);
     const append: IAppendFunc = async ({ id, range }, data, opts) => {
