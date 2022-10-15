@@ -11,10 +11,7 @@ import { pick } from 'lodash';
 export interface IGClientCreds {
     client_id: string;
     client_secret: string;
-}
-
-export interface IRefresCreds extends IGClientCreds {
-    refresh_token: string;    
+    refresh_token?: string;
 }
 
 export interface IGoogleSheetGridProperties {
@@ -90,6 +87,7 @@ export interface IGoogleToken {
     token_type: string;  //'Bearer'
 }
 
+//old, does not need refresh token
 export async function getTokenFromCode(creds: IGClientCreds, code:string, redirect_uri:string) : Promise<IGoogleToken> {
     const { client_id, client_secret } = creds;
     const dataStr = getFormData({
@@ -119,7 +117,7 @@ function betterErr(desc: string) {
         throw err;
     }
 }
-async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
+async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
     const { refresh_token, client_id, client_secret } = creds;
         
     if (!client_id || !client_secret) throw `doRefresh needs client_id and client_secret in creds`;
@@ -239,7 +237,7 @@ async function doRefresh(creds: IRefresCreds): Promise<IGoogleClient> {
 const clients = {} as {
     [name: string]: IGoogleClient;
 };
-export async function getClient(creds: IRefresCreds) {
+export async function getClient(creds: IGClientCreds) {
     const name = creds.client_id;
     let client = clients[name];
     const now = new Date().getTime();
@@ -255,15 +253,13 @@ export function getClientCredsByEnv(envName: string) {
     const creds: IGClientCreds = {
         client_id: process.env[`google_${envName}_client_id`] as string,
         client_secret: process.env[`google_${envName}_client_secret`] as string,
+        refresh_token: process.env[`google_${envName}_refresh_token`] as string,
     };    
     return creds;
 }
 
 export async function getClientByEnv(envName: string) {
-    const creds: IRefresCreds = {
-        ...getClientCredsByEnv(envName),
-        refresh_token: process.env[`google_${envName}_refresh_token`] as string,
-    };
+    const creds: IGClientCreds = getClientCredsByEnv(envName);    
     return getClient(creds);
 }
 
