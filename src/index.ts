@@ -1,7 +1,8 @@
 import { getFormData} from './util'
 import { getClient, getClientByEnv, getTokenFromCode, getClientCredsByEnv } from './googleApi'
+import * as gsAccount from './googleApiServiceAccount'
 
-
+//google should not be used
 const google = {
     getClient, getClientByEnv,getTokenFromCode,getClientCredsByEnv
 }
@@ -15,4 +16,4 @@ const msGraph = {
     msdir,
     msExcell
 }
-export { getFormData, google, msGraph }
+export { getFormData, google, msGraph, gsAccount }
