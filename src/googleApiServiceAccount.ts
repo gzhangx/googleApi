@@ -4,7 +4,7 @@
 //return rootUrl + '?' + querystring.stringify(opts);
 //'https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&response_type=code&client_id=client_id&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob'
 
-import axios, { Method } from 'axios';
+import { doHttpRequest, HttpRequestMethod } from './httpRequest';
 import { getFormData } from './util'
 import { pick } from 'lodash';
 import jwt from 'jsonwebtoken';
@@ -134,21 +134,21 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         curClientData.expirationTime = curTime + 3600 - 100;
         return curClientData.curToken;
     };
-    const doOp = (op: string, id: string, postFix: string, data?: any) => {
+    const doOp = (op: HttpRequestMethod, id: string, postFix: string, data?: string | object) => {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}${postFix}`;
-        return axios({
+        return doHttpRequest({
             url,
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${getToken()}`,
             },
-            method: op as Method,
+            method: op,
             data,
         }).then(r => {
-            return (r.data)
+            return (r)
         }).catch(betterErr(`doOps error ${url}`));
     }
-    const doPost = (id:string, postFix:string, data:any) => doOp('post', id, postFix, data);
+    const doPost = (id:string, postFix:string, data:any) => doOp('POST', id, postFix, data);
     const doBatchUpdate = async (id:string, data:any) => doPost(id, ':batchUpdate', data);
     const append: IAppendFunc = async ({ id, range }, data, opts) => {
         if (!opts) {
@@ -157,7 +157,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
-    const read: IReadFunc = async ({ id, range }) => doOp('get', id, `/values/${range}`);
+    const read: IReadFunc = async ({ id, range }) => doOp('GET', id, `/values/${range}`);
     return {
         //access_token,
         //expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
@@ -167,7 +167,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         append,
         read,
         getSheetOps: id => {
-            const getInfo = () => doOp('get', id, '') as Promise<IGoogleSheetInfo>;
+            const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
             const createSheet = async (sheetId: string, title: string) => {
                 return doBatchUpdate(id, {
                     requests: [
@@ -207,7 +207,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                         }
                     }
                     if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
-                    return doOp('put', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
+                    return doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
                         values,
                     })
                 },

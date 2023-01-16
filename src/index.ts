@@ -10,6 +10,7 @@ const google = {
 import * as msauth from './msGraph/msauth'
 import * as msdir from './msGraph/msdir'
 import * as msExcell from './msGraph/msExcell'
+import { doHttpRequest } from './httpRequest'
 
 const msGraph = {
     msauth,

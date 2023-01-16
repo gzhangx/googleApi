@@ -4,9 +4,11 @@
 //return rootUrl + '?' + querystring.stringify(opts);
 //'https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&response_type=code&client_id=client_id&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob'
 
-import axios, { Method } from 'axios';
+//import axios, { Method } from 'axios';
+import { doHttpRequest, HttpRequestMethod} from './httpRequest'
 import { getFormData } from './util'
 import { pick } from 'lodash';
+import { IRefreshTokenResult } from './msGraph/msauth';
 
 export interface IGClientCreds {
     client_id: string;
@@ -98,10 +100,13 @@ export async function getTokenFromCode(creds: IGClientCreds, code:string, redire
         grant_type: 'authorization_code'
     });
 
-    const tokenBody = await axios.post('https://oauth2.googleapis.com/token', dataStr,
-        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {            
-            return r.data;
-        });
+    const tokenBody = await doHttpRequest({
+        url: 'https://oauth2.googleapis.com/token',
+        method: 'POST',
+        data: dataStr,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {            
+            return r;
+        }) as IGoogleToken;
     return tokenBody;
 }
 
@@ -128,29 +133,30 @@ async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
         refresh_token,
         grant_type: 'refresh_token'
     });
-    const refreshBody = await axios.post('https://oauth2.googleapis.com/token', dataStr,
-        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {
-            return r.data;
+    const refreshBody = await doHttpRequest({ url: 'https://oauth2.googleapis.com/token', data: dataStr,
+    method: 'POST',
+         headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {
+            return r as IRefreshTokenResult;
         }).catch(betterErr(`refreshToken https://oauth2.googleapis.com/token`));
 
     const {
         access_token, expires_in, token_type
     } = refreshBody;
-    const doOp = (op: string, id: string, postFix: string, data?: any) => {
+    const doOp = (op: HttpRequestMethod, id: string, postFix: string, data?: any) => {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}${postFix}`;
-        return axios({
+        return doHttpRequest({
             url,
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${access_token}`,
             },
-            method: op as Method,
+            method: op,
             data,
         }).then(r => {
-            return (r.data)
+            return (r)
         }).catch(betterErr(`doOps error ${url}`));
     }
-    const doPost = (id:string, postFix:string, data:any) => doOp('post', id, postFix, data);
+    const doPost = (id:string, postFix:string, data:any) => doOp('POST', id, postFix, data);
     const doBatchUpdate = async (id:string, data:any) => doPost(id, ':batchUpdate', data);
     const append: IAppendFunc = async ({ id, range }, data, opts) => {
         if (!opts) {
@@ -159,7 +165,7 @@ async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
         if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
-    const read: IReadFunc = async ({ id, range }) => doOp('get', id, `/values/${range}`);
+    const read: IReadFunc = async ({ id, range }) => doOp('GET', id, `/values/${range}`);
     return {
         access_token,
         expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
@@ -168,7 +174,7 @@ async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
         append,
         read,
         getSheetOps: id => {
-            const getInfo = () => doOp('get', id, '') as Promise<IGoogleSheetInfo>;
+            const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
             const createSheet = async (sheetId: string, title: string) => {
                 return doBatchUpdate(id, {
                     requests: [
@@ -208,7 +214,7 @@ async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
                         }
                     }
                     if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
-                    return doOp('put', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
+                    return doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
                         values,
                     })
                 },
