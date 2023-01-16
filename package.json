@@ -1,6 +1,6 @@
 {
   "name": "@gzhangx/googleapi",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "description": "google api helper",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -22,7 +22,7 @@
   "homepage": "https://github.com/gzhangx/googleApi#readme",
   "dependencies": {
     "axios": "^0.26.1",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
