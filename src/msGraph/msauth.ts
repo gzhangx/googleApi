@@ -1,9 +1,49 @@
-import Axios, { AxiosRequestConfig } from "axios";
+//import Axios, { AxiosRequestConfig } from "axios";
+import { doHttpRequest, OutgoingHttpHeaders, HttpRequestMethod } from '../httpRequest';
 //import * as  promise from 'bluebird';
 import { get } from 'lodash';
 import { getFormData} from '../util'
+import { OutgoingHttpHeader } from 'http';
 
 export type ILogger = (...args: any[]) => void;
+
+type AxiosRequestConfig = {
+    headers: OutgoingHttpHeaders,
+}
+
+function doHttpGet(url: string, opts: AxiosRequestConfig) {
+    return doHttpRequest({
+        method: 'GET',
+        ...opts,
+        url,
+    })
+}
+
+function doHttpDelete(url: string, opts: AxiosRequestConfig) {
+    return doHttpRequest({
+        method: 'DELETE',
+        ...opts,
+        url,
+    })
+}
+
+function doHttpPost(url: string, data: object, opts: AxiosRequestConfig) {
+    return doHttpRequest({
+        method: 'POST',
+        ...opts,
+        url,
+        data,
+    })
+}
+
+function doHttpPatch(url: string, data: object, opts: AxiosRequestConfig) {
+    return doHttpRequest({
+        method: 'PATCH',
+        ...opts,
+        url,
+        data,
+    })
+}
 
 export interface IMsGraphCreds {
     //userId: string;
@@ -123,12 +163,13 @@ export function getAuth(opt: IMsGraphCreds) {
     
     async function doPost(url: string, data: { [id: string]: any }): Promise<any> {
         const dataStr = getFormData(data);
-        return await Axios.post(url, dataStr, {
+        return await doHttpRequest({url, data: dataStr, 
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            },
+            method: 'POST'
         }).then(r => {
-            return (r.data);
+            return (r);
         });
     }
 
@@ -292,8 +333,8 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
             headers: {
                 "Authorization": `Bearer ${tok.access_token}`
             },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
+            //maxContentLength: Infinity,
+            //maxBodyLength: Infinity,
         };
     }
 
@@ -315,32 +356,32 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
     async function doGet(urlPostFix: string, fmt: (cfg: AxiosRequestConfig) => AxiosRequestConfig = x => x): Promise<any> {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`GET ${uri}`);
-        return await Axios.get(uri, fmt(await getHeaders()))
+        return await doHttpGet(uri, fmt(await getHeaders()))
             .then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPost(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`POST ${uri}`);
-        return Axios.post(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        return doHttpPost(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPut(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PUT ${uri}`);
-        return Axios.put(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        return doHttpPost(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPatch(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
-        return Axios.patch(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        return doHttpPatch(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     async function doDelete(urlPostFix: string) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
-        return Axios.delete(uri, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        return doHttpDelete(uri, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
     }
 
     const ROOT_URL = 'https://graph.microsoft.com/v1.0';

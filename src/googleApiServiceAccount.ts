@@ -145,7 +145,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             method: op,
             data,
         }).then(r => {
-            return (r)
+            return (r.data)
         }).catch(betterErr(`doOps error ${url}`));
     }
     const doPost = (id:string, postFix:string, data:any) => doOp('POST', id, postFix, data);

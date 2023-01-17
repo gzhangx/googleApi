@@ -1,21 +1,27 @@
 import * as buffer from "buffer";
 
 import https from 'https';
-import http from 'http';
+import http, { IncomingHttpHeaders } from 'http';
 
-export type HttpRequestMethod ='GET' | 'POST' | 'PUT';
+export type OutgoingHttpHeaders = http.OutgoingHttpHeaders;
+export type HttpRequestMethod ='GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export interface IHttpRequestPrms {
     url: string,
     method: HttpRequestMethod,
-    headers: http.OutgoingHttpHeaders,
-    data: string | object,
+    headers?: http.OutgoingHttpHeaders,
+    data?: string | object,
     resProcessor?: (res: http.IncomingMessage, resolve: (unknown)=>void, reject: (unknown)=>void)=>{},
 }
 
+export interface IHttpResponseType {
+    data: string | object;
+    url: string;
+    headers: IncomingHttpHeaders;
+}
 export async function doHttpRequest(
     {url, method, headers, data,
                            resProcessor,
-                       }: IHttpRequestPrms): Promise<string|object|null>
+    }: IHttpRequestPrms): Promise<IHttpResponseType>
 {
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
@@ -54,9 +60,17 @@ export async function doHttpRequest(
                     else {
                         const contentType = res.headers['content-type'];
                         if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
-                            return resolve(JSON.parse(allData));
+                            return resolve({
+                                data: JSON.parse(allData),
+                                headers: res.headers,
+                                url,
+                            });
                         }
-                        resolve(allData);
+                        resolve({
+                            headers: res.headers,
+                            data: allData,
+                            url,
+                        });
                     }
                 });
             }

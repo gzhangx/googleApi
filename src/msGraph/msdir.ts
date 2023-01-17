@@ -1,6 +1,6 @@
 import { ILogger, IMsGraphCreds, getMsGraphConn } from "./msauth";
 import { sleep } from '../util'
-import axios from 'axios'
+import {doHttpRequest} from '../httpRequest'
 import * as path from 'path'
 import { delay, toPath } from "lodash";
 interface IParentReference  {
@@ -124,7 +124,10 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
             name: toName,
         };
         const headers = await ops.getHeaders();
-        return axios.post(ops.getMsGraphBaseUrl(`${getDriveAndByIdUrl(driveId, itemId)}/copy?@microsoft.graph.conflictBehavior=rename`), postData, headers).then(res => {
+        return doHttpRequest({
+            method: 'POST', url: ops.getMsGraphBaseUrl(`${getDriveAndByIdUrl(driveId, itemId)}/copy?@microsoft.graph.conflictBehavior=rename`),
+            data: postData, headers: headers.headers
+        }).then(res => {
             //console.log(res);
             return {
                 checkUrl: res.headers.location,
@@ -145,7 +148,7 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
         }, info.id, toNameFile);
 
         while (true) {            
-            const waitRes = (await axios.get(cpyRes.checkUrl)).data as ICopyStatusRes;
+            const waitRes = (await doHttpRequest({ method: 'GET', url: cpyRes.checkUrl})).data as ICopyStatusRes;
             if (waitRes.status === 'completed') {
                 return waitRes.resourceId;
             }

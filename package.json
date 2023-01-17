@@ -20,8 +20,7 @@
     "url": "https://github.com/gzhangx/googleApi/issues"
   },
   "homepage": "https://github.com/gzhangx/googleApi#readme",
-  "dependencies": {
-    "axios": "^0.26.1",
+  "dependencies": {    
     "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21"
   },

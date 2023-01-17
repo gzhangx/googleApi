@@ -136,7 +136,7 @@ async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
     const refreshBody = await doHttpRequest({ url: 'https://oauth2.googleapis.com/token', data: dataStr,
     method: 'POST',
          headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r => {
-            return r as IRefreshTokenResult;
+            return r.data as IRefreshTokenResult;
         }).catch(betterErr(`refreshToken https://oauth2.googleapis.com/token`));
 
     const {
@@ -153,7 +153,7 @@ async function doRefresh(creds: IGClientCreds): Promise<IGoogleClient> {
             method: op,
             data,
         }).then(r => {
-            return (r)
+            return (r.data)
         }).catch(betterErr(`doOps error ${url}`));
     }
     const doPost = (id:string, postFix:string, data:any) => doOp('POST', id, postFix, data);
