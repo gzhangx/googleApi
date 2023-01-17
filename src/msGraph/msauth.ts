@@ -80,6 +80,7 @@ export interface IRefreshTokenResult {
     access_token: string;
     refresh_token: string;
     id_token: string;
+    error?: string;
 }
 
 export interface ICodeWaitInfo {
@@ -161,7 +162,7 @@ export function getAuth(opt: IMsGraphCreds) {
     const queryCodeurl = `${baseQueryUrl}/token`;
 
     
-    async function doPost(url: string, data: { [id: string]: any }): Promise<any> {
+    async function doPost(url: string, data: { [id: string]: any }): Promise<object> {
         const dataStr = getFormData(data);
         return await doHttpRequest({url, data: dataStr, 
             headers: {
@@ -169,7 +170,7 @@ export function getAuth(opt: IMsGraphCreds) {
             },
             method: 'POST'
         }).then(r => {
-            return (r);
+            return (r.data as object);
         });
     }
 
@@ -193,7 +194,7 @@ export function getAuth(opt: IMsGraphCreds) {
                     scope,
                     code: deviceCode,
                     client_id
-                });
+                }) as IRefreshTokenResult;
                 opt.logger('getRefreshTokenPartFinish got result ', rrOrError);
                 if (rrOrError.error === 'authorization_pending') { //this no longer works with axios
                     opt.logger(`Waiting for deviceCode ${totalWait}/${maxPollTime}`, deviceCode);
@@ -202,7 +203,7 @@ export function getAuth(opt: IMsGraphCreds) {
                     await delay(pollTime);
                     continue;
                 }
-                const rr = rrOrError as IRefreshTokenResult;
+                const rr = rrOrError;
                 ///console.log(rr);
                 //const { access_token, refresh_token } = rr;
                 //fs.writeFileSync('credentials.json', JSON.stringify(rr, null, 2));

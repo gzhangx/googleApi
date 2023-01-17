@@ -10,11 +10,15 @@ const google = {
 import * as msauth from './msGraph/msauth'
 import * as msdir from './msGraph/msdir'
 import * as msExcell from './msGraph/msExcell'
-import { doHttpRequest } from './httpRequest'
+import * as httpRequest from './httpRequest'
 
 const msGraph = {
     msauth,
     msdir,
     msExcell
 }
-export { getFormData, google, msGraph, gsAccount }
+
+export {
+    getFormData, google, msGraph, gsAccount,
+    httpRequest,
+}
