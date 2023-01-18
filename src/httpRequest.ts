@@ -1,16 +1,14 @@
-import * as buffer from "buffer";
-
 import https from 'https';
 import http, { IncomingHttpHeaders } from 'http';
 
 export type OutgoingHttpHeaders = http.OutgoingHttpHeaders;
-export type HttpRequestMethod ='GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export interface IHttpRequestPrms {
     url: string,
     method: HttpRequestMethod,
     headers?: http.OutgoingHttpHeaders,
     data?: string | object,
-    resProcessor?: (res: http.IncomingMessage, resolve: (unknown)=>void, reject: (unknown)=>void)=>{},
+    resProcessor?: (res: http.IncomingMessage, resolve: (d: any) => void, reject: (d: unknown) => void) => {},
 }
 
 export interface IHttpResponseType {
@@ -19,10 +17,9 @@ export interface IHttpResponseType {
     headers: IncomingHttpHeaders;
 }
 export async function doHttpRequest(
-    {url, method, headers, data,
-                           resProcessor,
-    }: IHttpRequestPrms): Promise<IHttpResponseType>
-{
+    { url, method, headers, data,
+        resProcessor,
+    }: IHttpRequestPrms): Promise<IHttpResponseType> {
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
         let httpRequest = https.request;
@@ -33,6 +30,8 @@ export async function doHttpRequest(
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
+            if (!headers)
+                headers = {};
             headers['Content-Length'] = data.length;
         }
         const req = httpRequest({
@@ -48,6 +47,9 @@ export async function doHttpRequest(
                 let allData = '';
                 res.on('data', d => {
                     allData += d.toString();
+                });
+                res.on('error', err => {
+                    reject(err);
                 });
                 res.on('end', () => {
                     if (!res.complete)
@@ -75,6 +77,9 @@ export async function doHttpRequest(
                 });
             }
         });
+        req.on('error', err => {
+            reject(err);
+        })
         if (data) {
             req.write(data);
         }
