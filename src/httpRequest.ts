@@ -36,6 +36,8 @@ export async function doHttpRequest(
         }
         const req = httpRequest({
             hostname: urlObj.hostname,
+            port: urlObj.port,
+            protocol: urlObj.protocol,
             path: urlObj.pathname + urlObj.search,
             method,
             headers,

@@ -1,6 +1,6 @@
 {
   "name": "@gzhangx/googleapi",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "description": "google api helper",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
