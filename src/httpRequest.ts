@@ -23,7 +23,7 @@ export async function doHttpRequest(
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
         let httpRequest = https.request;
-        if (urlObj.protocol === 'http') {
+        if (urlObj.protocol === 'http:') {
             httpRequest = http.request;
         }
         if (data !== null && data !== undefined) {
@@ -60,6 +60,7 @@ export async function doHttpRequest(
                             url,
                             method,
                             data,
+                            receivedData: allData,
                         });
                     else {
                         const contentType = res.headers['content-type'];
