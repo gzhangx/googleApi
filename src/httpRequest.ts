@@ -26,13 +26,15 @@ export async function doHttpRequest(
         if (urlObj.protocol === 'http:') {
             httpRequest = http.request;
         }
+        let dataToSent: Buffer = null;
         if (data !== null && data !== undefined) {
             if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
             if (!headers)
                 headers = {};
-            headers['Content-Length'] = data.length;
+            dataToSent = Buffer.from(data, 'utf-8');
+            headers['Content-Length'] = dataToSent.length;
         }
         const req = httpRequest({
             hostname: urlObj.hostname,
@@ -83,8 +85,8 @@ export async function doHttpRequest(
         req.on('error', err => {
             reject(err);
         })
-        if (data) {
-            req.write(data);
+        if (dataToSent) {
+            req.write(dataToSent);
         }
         req.end();
     });
