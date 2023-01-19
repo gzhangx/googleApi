@@ -15,6 +15,10 @@ export interface IHttpResponseType {
     data: string | object;
     url: string;
     headers: IncomingHttpHeaders;
+    complete: boolean;
+    requestData: string | object;
+    statusCode?: number;
+    statusMessage?: string;
 }
 export async function doHttpRequest(
     { url, method, headers, data,
@@ -56,29 +60,25 @@ export async function doHttpRequest(
                     reject(err);
                 });
                 res.on('end', () => {
-                    if (!res.complete)
-                        reject({
-                            message: 'The connection was terminated while the message was still being sent',
-                            url,
-                            method,
-                            data,
-                            receivedData: allData,
-                        });
-                    else {
-                        const contentType = res.headers['content-type'];
-                        if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
-                            return resolve({
-                                data: JSON.parse(allData),
-                                headers: res.headers,
-                                url,
-                            });
-                        }
-                        resolve({
-                            headers: res.headers,
-                            data: allData,
-                            url,
+                    const rspData = {
+                        headers: res.headers,
+                        url,
+                        requestData: data,
+                        data: allData,
+                        complete: res.complete,
+                        statusCode: res.statusCode,
+                        statusMessage: res.statusMessage,
+                    }
+                    
+                    const contentType = res.headers['content-type'];
+                    if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {                        
+                        return resolve({
+                            ...rspData,
+                            data: JSON.parse(allData),                            
                         });
                     }
+                    resolve(rspData);
+                    
                 });
             }
         });
