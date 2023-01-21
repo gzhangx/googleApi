@@ -32,11 +32,14 @@ export async function doHttpRequest(
         }
         let dataToSent: Buffer = null;
         if (data !== null && data !== undefined) {
-            if (typeof data !== 'string') {
-                data = JSON.stringify(data);
-            }
             if (!headers)
                 headers = {};
+            if (typeof data !== 'string') {
+                data = JSON.stringify(data);
+                if (!headers['Content-Type']) {
+                    headers['Content-Type'] = 'application/json';
+                }
+            }            
             dataToSent = Buffer.from(data, 'utf-8');
             headers['Content-Length'] = dataToSent.length;
         }
