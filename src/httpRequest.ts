@@ -1,5 +1,5 @@
-import https from 'https';
-import http, { IncomingHttpHeaders } from 'http';
+import * as https from 'https';
+import * as http from 'http';
 
 export type OutgoingHttpHeaders = http.OutgoingHttpHeaders;
 export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -14,7 +14,7 @@ export interface IHttpRequestPrms {
 export interface IHttpResponseType {
     data: string | object;
     url: string;
-    headers: IncomingHttpHeaders;
+    headers: http.IncomingHttpHeaders;
     complete: boolean;
     requestData: string | object;
     statusCode?: number;
@@ -69,16 +69,16 @@ export async function doHttpRequest(
                         statusCode: res.statusCode,
                         statusMessage: res.statusMessage,
                     }
-                    
+
                     const contentType = res.headers['content-type'];
-                    if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {                        
+                    if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
                         return resolve({
                             ...rspData,
-                            data: JSON.parse(allData),                            
+                            data: JSON.parse(allData),
                         });
                     }
                     resolve(rspData);
-                    
+
                 });
             }
         });
