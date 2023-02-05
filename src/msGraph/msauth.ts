@@ -341,7 +341,7 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
     async function parseResp(opts: GMRequestConfig, r: IHttpResponseType) {     
         if (r.statusCode === 302) {
             if (r.headers.location) {
-                return await doHttpGet(r.headers.location, opts)
+                return await doHttpGet(r.headers.location, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(r.headers.location)));
             }
         }
         return r.data;

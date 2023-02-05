@@ -157,11 +157,14 @@ async function testGetFile() {
     */
 
     const data = await msdirOps.getFileByPath('Documents/safehouse/empty2022expense.xlsx');
-    console.log('data',data);
+    console.log('data', data.byteLength, data.length);
+    fs.writeFileSync('d:/temp/tmp.xlsx', data, {
+        encoding: 'binary'
+    });
     
 }
 
-testGetFile().catch(err => {
+test().catch(err => {
     console.log('error happened');
     console.log(get(err, 'response.data') || err)
     console.log('error happened end');

@@ -54,15 +54,16 @@ export async function doHttpRequest(
             if (resProcessor) {
                 resProcessor(res, resolve, reject);
             } else {
-                res.setEncoding('utf8');
-                let allData = '';
+                //res.setEncoding('utf8');
+                let allBuffData = [];                
                 res.on('data', d => {
-                    allData += d.toString();
+                    allBuffData.push(d);
                 });
                 res.on('error', err => {
                     reject(err);
                 });
                 res.on('end', () => {
+                    const allData = Buffer.concat(allBuffData);
                     const rspData = {
                         headers: res.headers,
                         url,
@@ -77,7 +78,7 @@ export async function doHttpRequest(
                     if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
                         return resolve({
                             ...rspData,
-                            data: JSON.parse(allData),
+                            data: JSON.parse(allData.toString('utf-8')),
                         });
                     }
                     resolve(rspData);
