@@ -164,7 +164,7 @@ async function testGetFile() {
     
 }
 
-test().catch(err => {
+testGetFile().catch(err => {
     console.log('error happened');
     console.log(get(err, 'response.data') || err)
     console.log('error happened end');

@@ -1,5 +1,5 @@
 //import Axios, { GMRequestConfig } from "axios";
-import { doHttpRequest, OutgoingHttpHeaders, HttpRequestMethod, IHttpResponseType } from '../httpRequest';
+import { doHttpRequest, OutgoingHttpHeaders, IHttpRequestPrms, IHttpResponseType } from '../httpRequest';
 //import * as  promise from 'bluebird';
 import { get } from 'lodash';
 import { getFormData} from '../util'
@@ -8,6 +8,7 @@ export type ILogger = (...args: any[]) => void;
 
 type GMRequestConfig = {
     headers: OutgoingHttpHeaders,
+    followRedirect?: boolean;
 }
 
 function doHttpGet(url: string, opts: GMRequestConfig) {
@@ -332,18 +333,18 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
         return {
             headers: {
                 "Authorization": `Bearer ${tok.access_token}`
-            },
+            },            
             //maxContentLength: Infinity,
             //maxBodyLength: Infinity,
         };
     }
 
     async function parseResp(opts: GMRequestConfig, r: IHttpResponseType) {     
-        if (r.statusCode === 302) {
-            if (r.headers.location) {
-                return await doHttpGet(r.headers.location, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(r.headers.location)));
-            }
-        }
+        //if (r.statusCode === 302) {
+        //    if (r.headers.location) {
+        //        return await doHttpGet(r.headers.location, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(r.headers.location)));
+        //    }
+        //}
         return r.data;
     }
 
@@ -361,7 +362,11 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
     async function doGet(urlPostFix: string, fmt: (cfg: GMRequestConfig) => GMRequestConfig = x => x): Promise<any> {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`GET ${uri}`);
-        const opts = fmt(await getHeaders());
+        const headers = await getHeaders();
+        const opts = fmt({
+            ...headers,
+            followRedirect: true,
+        });
         return await doHttpGet(uri, opts)
             .then(async r=>await parseResp(opts, r)).catch(errProc(new GGraphError(uri)));
     }

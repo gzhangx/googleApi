@@ -3,16 +3,19 @@ import * as http from 'http';
 
 export type OutgoingHttpHeaders = http.OutgoingHttpHeaders;
 export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+type PromiseRejType = (d: unknown) => void;
 export interface IHttpRequestPrms {
-    url: string,
-    method: HttpRequestMethod,
-    headers?: http.OutgoingHttpHeaders,
-    data?: string | object,
-    resProcessor?: (res: http.IncomingMessage, resolve: (d: any) => void, reject: (d: unknown) => void) => {},
+    url: string;
+    method: HttpRequestMethod;
+    headers?: http.OutgoingHttpHeaders;
+    data?: string | object;
+    resProcessor?: (res: http.IncomingMessage, resolve: PromiseRejType, reject: PromiseRejType) => {};
+    resDataProcessor?: (res: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => void;
+    followRedirect?: boolean;
 }
 
 export interface IHttpResponseType {
-    data: string | object;
+    data: string | Buffer | object;
     url: string;
     headers: http.IncomingHttpHeaders;
     complete: boolean;
@@ -21,9 +24,24 @@ export interface IHttpResponseType {
     statusMessage?: string;
 }
 export async function doHttpRequest(
-    { url, method, headers, data,
-        resProcessor,
-    }: IHttpRequestPrms): Promise<IHttpResponseType> {
+    requestPrms: IHttpRequestPrms): Promise<IHttpResponseType> {
+    
+    const rspDataProcessor = requestPrms.resDataProcessor || ((rspData: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => {
+        const contentType = rspData.headers['content-type'];
+        if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
+            return resolve({
+                ...rspData,
+                data: JSON.parse(rspData.data.toString('utf-8')),
+            });
+        }
+        resolve(rspData);
+    });
+    let { headers, data,        
+    } = requestPrms;
+    const { url, method, resProcessor,
+        followRedirect,
+    } = requestPrms;
+    
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
         let httpRequest = https.request;
@@ -62,7 +80,7 @@ export async function doHttpRequest(
                 res.on('error', err => {
                     reject(err);
                 });
-                res.on('end', () => {
+                res.on('end', async () => {
                     const allData = Buffer.concat(allBuffData);
                     const rspData = {
                         headers: res.headers,
@@ -74,14 +92,25 @@ export async function doHttpRequest(
                         statusMessage: res.statusMessage,
                     }
 
-                    const contentType = res.headers['content-type'];
-                    if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
-                        return resolve({
-                            ...rspData,
-                            data: JSON.parse(allData.toString('utf-8')),
-                        });
+                    if (followRedirect) {
+                        if (res.statusCode === 302) {
+                            const location = res.headers.location;
+                            if (location) {
+                                //return await doHttpGet(r.headers.location, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(r.headers.location)));
+                                try {
+                                    const redirRsp = await doHttpRequest({
+                                        ...requestPrms,
+                                        url: location,
+                                        method: 'GET',
+                                    });
+                                    resolve(redirRsp);
+                                } catch (err) {
+                                    reject(err);
+                                }
+                            }
+                        }
                     }
-                    resolve(rspData);
+                    rspDataProcessor(rspData, resolve, reject); //our def rej is not used
 
                 });
             }
