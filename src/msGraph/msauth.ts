@@ -1,17 +1,16 @@
-//import Axios, { AxiosRequestConfig } from "axios";
-import { doHttpRequest, OutgoingHttpHeaders, HttpRequestMethod } from '../httpRequest';
+//import Axios, { GMRequestConfig } from "axios";
+import { doHttpRequest, OutgoingHttpHeaders, HttpRequestMethod, IHttpResponseType } from '../httpRequest';
 //import * as  promise from 'bluebird';
 import { get } from 'lodash';
 import { getFormData} from '../util'
-import { OutgoingHttpHeader } from 'http';
 
 export type ILogger = (...args: any[]) => void;
 
-type AxiosRequestConfig = {
+type GMRequestConfig = {
     headers: OutgoingHttpHeaders,
 }
 
-function doHttpGet(url: string, opts: AxiosRequestConfig) {
+function doHttpGet(url: string, opts: GMRequestConfig) {
     return doHttpRequest({
         method: 'GET',
         ...opts,
@@ -19,7 +18,7 @@ function doHttpGet(url: string, opts: AxiosRequestConfig) {
     })
 }
 
-function doHttpDelete(url: string, opts: AxiosRequestConfig) {
+function doHttpDelete(url: string, opts: GMRequestConfig) {
     return doHttpRequest({
         method: 'DELETE',
         ...opts,
@@ -27,7 +26,7 @@ function doHttpDelete(url: string, opts: AxiosRequestConfig) {
     })
 }
 
-function doHttpPost(url: string, data: object, opts: AxiosRequestConfig) {
+function doHttpPost(url: string, data: object, opts: GMRequestConfig) {
     return doHttpRequest({
         method: 'POST',
         ...opts,
@@ -36,7 +35,7 @@ function doHttpPost(url: string, data: object, opts: AxiosRequestConfig) {
     })
 }
 
-function doHttpPatch(url: string, data: object, opts: AxiosRequestConfig) {
+function doHttpPatch(url: string, data: object, opts: GMRequestConfig) {
     return doHttpRequest({
         method: 'PATCH',
         ...opts,
@@ -262,9 +261,9 @@ export function getAuth(opt: IMsGraphCreds) {
 
 export interface IMsGraphOps {
     getMsGraphBaseUrl: (urlPostFix: string) => string;
-    getHeaders: () => Promise<AxiosRequestConfig>;
-    parseResp: (r: { data: any }) => any;
-    doGet: (urlPostFix: string, fmt?: (cfg: AxiosRequestConfig) => AxiosRequestConfig) => Promise<any>;
+    getHeaders: () => Promise<GMRequestConfig>;
+    parseResp: (opts: GMRequestConfig, r: IHttpResponseType)=>Promise<any>;
+    doGet: (urlPostFix: string, fmt?: (cfg: GMRequestConfig) => GMRequestConfig) => Promise<any>;
     doPost: (urlPostFix: string, data: object) => Promise<any>;
     doPut: (urlPostFix: string, data: object) => Promise<any>;
     doPatch: (urlPostFix: string, data: object) => Promise<any>;
@@ -328,7 +327,7 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
         return optTokenInfo;
     }
 
-    async function getHeaders(): Promise<AxiosRequestConfig> {
+    async function getHeaders(): Promise<GMRequestConfig> {
         const tok = await getToken();
         return {
             headers: {
@@ -339,7 +338,12 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
         };
     }
 
-    function parseResp(r: { data: any }) {        
+    async function parseResp(opts: GMRequestConfig, r: IHttpResponseType) {     
+        if (r.statusCode === 302) {
+            if (r.headers.location) {
+                return await doHttpGet(r.headers.location, opts)
+            }
+        }
         return r.data;
     }
 
@@ -354,35 +358,40 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
 
     const getMsGraphBaseUrl = (urlPostFix: string) => `${ROOT_URL}/${urlPostFix}`;
 
-    async function doGet(urlPostFix: string, fmt: (cfg: AxiosRequestConfig) => AxiosRequestConfig = x => x): Promise<any> {
+    async function doGet(urlPostFix: string, fmt: (cfg: GMRequestConfig) => GMRequestConfig = x => x): Promise<any> {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`GET ${uri}`);
-        return await doHttpGet(uri, fmt(await getHeaders()))
-            .then(parseResp).catch(errProc(new GGraphError(uri)));
+        const opts = fmt(await getHeaders());
+        return await doHttpGet(uri, opts)
+            .then(async r=>await parseResp(opts, r)).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPost(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`POST ${uri}`);
-        return doHttpPost(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        const opts = await getHeaders();
+        return doHttpPost(uri, data, opts).then(async r=>await parseResp(opts,r)).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPut(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PUT ${uri}`);
-        return doHttpPost(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        const opts = await getHeaders()
+        return doHttpPost(uri, data, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(uri)));
     }
 
     async function doPatch(urlPostFix: string, data: object) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
-        return doHttpPatch(uri, data, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        const opts = await getHeaders()
+        return doHttpPatch(uri, data, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(uri)));
     }
 
     async function doDelete(urlPostFix: string) {
         const uri = getMsGraphBaseUrl(urlPostFix);
         opt.logger(`PATCH ${uri}`);
-        return doHttpDelete(uri, await getHeaders()).then(parseResp).catch(errProc(new GGraphError(uri)));
+        const opts = await getHeaders()
+        return doHttpDelete(uri, opts).then(async r => await parseResp(opts, r)).catch(errProc(new GGraphError(uri)));
     }
 
     const ROOT_URL = 'https://graph.microsoft.com/v1.0';

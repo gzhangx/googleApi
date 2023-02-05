@@ -136,7 +136,32 @@ async function testFast() {
     sheetRes.values[50][0] = 'testtestesfaasdfadfaf';
     await xlsOps.updateRange('Table B', 'A1', `J${sheetRes.values.length}`, sheetRes.values);
 }
-test().catch(err => {
+
+async function testGetFile() {
+    const tenantClientInfo: IMsGraphCreds = getTenantInfo();
+    const prm: IMsGraphDirPrms = {
+        creds: tenantClientInfo,
+        sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
+        driveId: '',
+    };
+    const msdirOps = await all.msGraph.msdir.getMsDir(prm);
+    /*
+    const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
+    console.log(cpinfo.id);
+    const cpres = await msdirOps.copyItem({
+        driveId: cpinfo.parentReference.driveId,
+        path: 'Documents/safehouse/safehouseRecords',
+        id:'',
+    }, cpinfo.id, 'testnewDelete.xlsx');
+    console.log(cpres);
+    */
+
+    const data = await msdirOps.getFileByPath('Documents/safehouse/empty2022expense.xlsx');
+    console.log('data',data);
+    
+}
+
+testGetFile().catch(err => {
     console.log('error happened');
     console.log(get(err, 'response.data') || err)
     console.log('error happened end');
