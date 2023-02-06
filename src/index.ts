@@ -1,4 +1,4 @@
-import { getFormData} from './util'
+import { getFormData, sleep } from './util'
 import { getClient, getClientByEnv, getTokenFromCode, getClientCredsByEnv } from './googleApi'
 import * as gsAccount from './googleApiServiceAccount'
 
@@ -21,4 +21,5 @@ const msGraph = {
 export {
     getFormData, google, msGraph, gsAccount,
     httpRequest,
+    sleep,
 }
