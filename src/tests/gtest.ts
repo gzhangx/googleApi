@@ -1,7 +1,15 @@
 import { getClientByEnv } from '../googleApi'
+import * as gs from '../googleApiServiceAccount'
 import { pick } from 'lodash';
+import * as fs from 'fs';
 
-async function test(d: boolean) {
+async function test(d:boolean) {
+    const cli = gs.getClient(JSON.parse(fs.readFileSync('../googleSvcAccount-pem.json').toString()));
+    const ops = cli.getSheetOps('12rmBBbxS6j3-rL0vl25eGV8Hb3O-vNNDMdnNl7rAYeI');
+    const vals = await ops.read('Sheet1!A1:B2')
+    console.log(vals);
+}
+async function testOld(d: boolean) {
     const cli = await getClientByEnv('gzperm');
     console.log('got client')    
     const ops = await cli.getSheetOps('1u_AR8y7iCRPGyDhdOb1cHhjL-vclCIxuLkMhIxd08mU')
