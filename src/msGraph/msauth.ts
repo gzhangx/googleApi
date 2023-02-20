@@ -53,6 +53,7 @@ export interface IMsGraphCreds {
     scope?: string;
     refresh_token: string;
     logger: ILogger;
+    debugLogger?: ILogger;
     loadTokenCache?: () => Promise<ITokenInfoCache>;
     saveTokenCache?: (cache: ITokenInfoCache) => Promise<void>;
 }
@@ -308,7 +309,8 @@ export async function getMsGraphConn(opt: IMsGraphCreds): Promise<IMsGraphOps> {
             else connCaccheInfo.cache = {};
         }
         const optTokenInfo = connCaccheInfo.cache[cacheKey];
-        opt.logger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
+        if (opt.debugLogger)
+            opt.debugLogger(`debugrm getMsGraphConn now=${now} exp=${optTokenInfo?.expires_on}`);
         if (!optTokenInfo || optTokenInfo.expires_on < now) {
             const { getAccessToken } = getAuth(opt);
             opt.logger('getting new token');
