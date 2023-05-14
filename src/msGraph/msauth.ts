@@ -127,6 +127,11 @@ export function encodeSharedUrl(sharingUrl: string): string {
     return resUrl;
 }
 
+export interface IMsDirError {
+    code: string;
+    message: string;
+}
+
 export interface IDriveItemInfo {
     id: string;
     //lastModifiedDateTime: string;
@@ -140,10 +145,12 @@ export interface IDriveItemInfo {
         //driveType: string; // "documentLibrary",
         id: string;
         //path: string;"/drives/b!hXChu0dhsUaKN7pqt1bD3_OeafGaVT1FohEO2dBMjAY5XO0eLYVxS7CH5lgurhQd/root:/新人资料"
+        path: string; // '/drives/b!3m0sMhWlfku_i32QsJ_udiP83Xw24ZVPoA3osfM4jxxxxxvoDEQ5BLs/root:/CAFs'
     };    
     //folder: {
     //    childCount: number;
     //};
+    error?: IMsDirError;
 }
 
 export function getAuth(opt: IMsGraphCreds) {

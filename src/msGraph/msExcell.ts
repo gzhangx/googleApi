@@ -57,7 +57,7 @@ export async function getMsExcel(prm: IMsGraphDirPrms, opt: IMsGraphExcelItemOpt
     const ops = await getMsGraphConn(prm.creds);    
     
     if (!opt.itemId) {
-        if (!prm.driveId) {
+        if (!prm.driveInfo) {
             if (!prm.sharedUrl) {
                 const error = `Must specify drive or sharedUrl`;
                 logger(error);
@@ -66,17 +66,20 @@ export async function getMsExcel(prm: IMsGraphDirPrms, opt: IMsGraphExcelItemOpt
                     message: error,
                 }
             }
-            const dirInfo = await getMsDir(prm);
-            prm.driveId = dirInfo.driveId;
+            await getMsDir(prm);
         }
-        const drItmUrl = `${getDriveUrl(prm.driveId, opt.fileName)}`;    
+        const drItmUrl = `${getDriveUrl(prm.driveInfo, opt.fileName)}`;    
         const r: IDriveItemInfo = await ops.doGet(drItmUrl);
+        if (r.error) {
+            logger(`getMsExcel Error ${r.error.message}`, r.error);
+            throw r.error;
+        }
         opt.itemId = r.id;
         logger(`query id for ${opt.fileName} = ${opt.itemId}`);        
     }
     //const getUrl = (postFix: string) => `https://graph.microsoft.com/v1.0/users('${opt.tenantClientInfo.userId}')/drive/items('${opt.itemId}')/workbook/worksheets${postFix}`;
     //const sheetUrl = `drive/items('${opt.itemId}')/workbook/worksheets`;
-    const sheetUrl = `${getDriveAndByIdUrl(prm.driveId, opt.itemId)}:/workbook/worksheets`;
+    const sheetUrl = `${getDriveAndByIdUrl(prm.driveInfo?.driveId, opt.itemId)}:/workbook/worksheets`;
 
     async function getWorkSheets(): Promise<IWorkSheetInfo> {
         return await ops.doGet(sheetUrl);

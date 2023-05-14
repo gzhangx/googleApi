@@ -51,21 +51,20 @@ async function test() {
     }
     const prm: IMsGraphDirPrms = {  
         creds: tenantClientInfo,
-        sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
-        driveId:'',
+        sharedUrl: 'https://acccnusa.sharepoint.com/:x:/r/sites/LocalMission/_layouts/15/Doc.aspx?sourcedoc=%7B8D63AFAA-9357-4D71-9C38-CC8DBBB15B19%7D&file=%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95%20NewLocalMission.xlsx&action=default&mobileredirect=true',        
     };
     const opt: IMsGraphExcelItemOpt = {
         //itemId: '01XX2KYFMYO2Q7GM4VTBCIUIDPXYH6ZXWV',
-        fileName:'三福探访记录.xlsx'
+        fileName: '三福探访记录.xlsx'
     };    
     console.log('getting sheet')
     const sheet = await all.msGraph.msExcell.getMsExcel(prm, opt);
     const info = await sheet.getWorkSheets()
-    console.log(info);
-    const data = await sheet.readRange('Sheet1', 'A1', 'G1');
+    console.log('Info=====>',info);
+    const data = await sheet.readRange('2023', 'A1', 'G1');
     console.log('got sheet done', data)
 
-    const dataAll = await sheet.readAll('Sheet1');
+    const dataAll = await sheet.readAll('2023');
     console.log('got sheet done', dataAll.text)
 
     const summary =dataAll.text.slice(1).reduce((acc, d) => {
@@ -92,7 +91,7 @@ async function test() {
     await sheet.updateRange('Summary', 'A1', `B${updateData.length}`, updateData);
     
     const msdirOps = await all.msGraph.msdir.getMsDir(prm);
-    const cpinfo = await msdirOps.getFileInfoByPath('Documents/safehouse/empty2022expense.xlsx')
+    const cpinfo = await msdirOps.getFileInfoByPath('empty2022expense.xlsx')
     console.log(cpinfo.id);
 console.log(cpinfo.parentReference)
     const cpres = await msdirOps.copyItem({
@@ -110,7 +109,6 @@ async function testFast() {
     const prm: IMsGraphDirPrms = {      
         creds: tenantClientInfo,        
         sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
-        driveId:'',
     };
     const msdirOps = await all.msGraph.msdir.getMsDir(prm);
     /*
@@ -127,7 +125,7 @@ async function testFast() {
     const newId = await msdirOps.copyItemByName('Documents/safehouse/empty2022expense.xlsx', 'Documents/safehouse/safehouseRecords/delet1.xlsx')
     console.log('newFileId is ', newId);
 
-    prm.driveId = msdirOps.driveId;
+    //prm.driveId = msdirOps.driveId;
     const xlsOps = await all.msGraph.msExcell.getMsExcel(prm, {
         itemId: newId,        
     })
@@ -142,7 +140,6 @@ async function testGetFile() {
     const prm: IMsGraphDirPrms = {
         creds: tenantClientInfo,
         sharedUrl: 'https://acccnusa-my.sharepoint.com/:x:/r/personal/gangzhang_acccn_org/Documents/%E4%B8%89%E7%A6%8F%E6%8E%A2%E8%AE%BF%E8%AE%B0%E5%BD%95.xlsx?d=wf3a17698953344988a206fbe0fecded5&csf=1&web=1&e=sMhg4O',
-        driveId: '',
     };
     const msdirOps = await all.msGraph.msdir.getMsDir(prm);
     /*

@@ -10,6 +10,11 @@ interface IParentReference  {
     path: string;
 }
 
+export interface IMsGraphDirDriveInfo {
+    driveId: string;
+    path: string;
+}
+
 export interface IMsDirOps {
     //doGet: (itemId: string, action: string) => Promise<any>;
     //doPost: (itemId: string, action: string, data: object) => Promise<any>;
@@ -24,13 +29,15 @@ export interface IMsDirOps {
     moveItem: (itemId: string, update: IMoveItemResp) => Promise<IMoveItemResp>;
     copyItemByName: (fname: string, toName: string, delayMs?: number)=>Promise<string>;
     getDriveAndByIdUrl: (driveId: string, itemId: string) => string;
-    driveId: string;
+    driveInfo: IMsGraphDirDriveInfo;
 }
+
+
 
 export interface IMsGraphDirPrms {
     creds: IMsGraphCreds;
     sharedUrl?: string;
-    driveId?: string;
+    driveInfo?: IMsGraphDirDriveInfo;
 }
 
 export interface IMoveItemResp {
@@ -49,7 +56,9 @@ export interface ICopyStatusRes {
     status: 'inProgress' | 'completed'
 }
 
-export const getDriveUrl = (driveId: string, path: string) => `drives/${driveId}/root:/${encodeURIComponent(path.replace(/[\\"|*<>?]/g, ''))}`;
+export const getDriveUrl = (driveInfo: IMsGraphDirDriveInfo, path: string) =>
+    `${driveInfo.path}/${encodeURIComponent(path.replace(/[\\"|*<>?]/g, ''))}`;
+    //`drives/${driveId}/root:/${encodeURIComponent(path.replace(/[\\"|*<>?]/g, ''))}`;
 export const getDriveAndByIdUrl = (driveId: string, itemId: string) => `drives/${driveId}/items/${itemId}`;
 export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
     const ops = await getMsGraphConn(prms.creds);
@@ -72,8 +81,8 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
     //     });
     // }
 
-    let driveId = prms.driveId;
-    if (!driveId) {
+    let driveInfo = prms.driveInfo;
+    if (!driveInfo) {
         const itmInf = await ops.getSharedItemInfo(prms.sharedUrl);
         if (!itmInf.parentReference) {
             const message = `bad sharedUrl ${prms.sharedUrl}`;
@@ -82,17 +91,22 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
                 message
             };
         }
-        driveId = itmInf.parentReference.driveId;
+        prms.driveInfo = {
+            ...itmInf.parentReference
+        };
+        // prms.driveInfo.driveId = itmInf.parentReference.driveId;
+        // prms.driveInfo.path = itmInf.parentReference.path;
     }
+    const driveId = prms.driveInfo.driveId;
     //const getDriveUrl = () => `https://graph.microsoft.com/v1.0/users('${opt.userId}')/drive`
     //const getUrl = (itemId: string, action: string) => `${getDriveUrl()}/items('${itemId}')/${action}`;
        
     async function createFile(path: string, data: Buffer): Promise<IFileCreateResponse> {
-        return ops.doPut(`${getDriveUrl(driveId, path)}:/content`, data);
+        return ops.doPut(`${getDriveUrl(prms.driveInfo, path)}:/content`, data);
     }
     
     async function getFileByPath(fname: string): Promise<Buffer> {
-        return ops.doGet(`${getDriveUrl(driveId, fname)}:/content`, cfg => {
+        return ops.doGet(`${getDriveUrl(prms.driveInfo, fname)}:/content`, cfg => {
             return {
                 ...cfg,
                 responseType: 'arraybuffer',
@@ -101,7 +115,7 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
     }
 
     async function createDir(path: string, name: string): Promise<IDirCreateResponse> {
-        return ops.doPost(`${getDriveUrl(driveId, path)}:/children`, {
+        return ops.doPost(`${getDriveUrl(prms.driveInfo, path)}:/children`, {
             name,
             "folder": {},
             "@microsoft.graph.conflictBehavior": "replace"
@@ -109,7 +123,7 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
     }
 
     async function getFileInfoByPath(fname: string) : Promise<IFileCreateResponse> {
-        return ops.doGet(`${getDriveUrl(driveId, fname)}`);
+        return ops.doGet(`${getDriveUrl(prms.driveInfo, fname)}`);
     }
     async function deleteItem(itemId: string) :Promise<void> {
         return ops.doDelete(`${getDriveAndByIdUrl(driveId, itemId)}`);
@@ -174,7 +188,7 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
         moveItem,
         getDriveAndByIdUrl,
         copyItemByName,
-        driveId,
+        driveInfo,
     }
 
 }
