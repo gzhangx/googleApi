@@ -152,7 +152,7 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
     async function copyItemByName(fname: string, toName: string, delayMs?: number, logger: ILogger = null) {
         if (!delayMs || delayMs < 0) delayMs = 100;
         const info = await getFileInfoByPath(fname);
-        const toPath = path.join(info.parentReference.path, path.dirname(toName));
+        const toPath = `${info.parentReference.path}/${path.dirname(toName)}`;
         const toNameFile = path.basename(toName);
         if (logger) logger(`to path ${toPath}, to file=${toNameFile}`);
         const cpyRes = await copyItem({
