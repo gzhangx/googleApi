@@ -27,7 +27,7 @@ export interface IMsDirOps {
     deleteItem: (itemId: string) => Promise<void>;
     copyItem: (parentInfo: IParentReference, itemId: string, toName:string) => Promise<ICopyItemResp>;
     moveItem: (itemId: string, update: IMoveItemResp) => Promise<IMoveItemResp>;
-    copyItemByName: (fname: string, toName: string, delayMs?: number)=>Promise<string>;
+    copyItemByName: (fname: string, toName: string, delayMs?: number, logger?: ILogger)=>Promise<string>;
     getDriveAndByIdUrl: (driveId: string, itemId: string) => string;
     driveInfo: IMsGraphDirDriveInfo;
 }
@@ -149,12 +149,12 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
         })        
     }
 
-    async function copyItemByName(fname: string, toName: string, delayMs?: number) {
+    async function copyItemByName(fname: string, toName: string, delayMs?: number, logger: ILogger = null) {
         if (!delayMs || delayMs < 0) delayMs = 100;
         const info = await getFileInfoByPath(fname);
-        const toPath = path.dirname(toName);
+        const toPath = path.join(info.parentReference.path, path.dirname(toName));
         const toNameFile = path.basename(toName);
-        console.log(`to path ${toPath}, to file=${toNameFile}`);
+        if (logger) logger(`to path ${toPath}, to file=${toNameFile}`);
         const cpyRes = await copyItem({
             driveId: info.parentReference.driveId,
             path: toPath,
