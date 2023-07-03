@@ -81,6 +81,7 @@ export interface IGoogleClient {
         createSheet: (sheetId: string, title: string) => IDoOpReturn;
         autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
         updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
+        autoUpdateValues: (sheetName: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
         addSheet: (title: string) => IDoOpReturn;
     };
 }
@@ -218,18 +219,22 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 return await createSheet(maxId.toString(), title);
             };
 
-            async function readDataByColumnName(sheetName: string, width: number) {
+            async function getSheetRange(sheetName: string, width: number) {
                 if (sheetName.indexOf('!') < 0) {
                     sheetName = sheetName.trim();
                     const sheetInfos = await sheetInfo();
                     const info = sheetInfos.find(s => s.title === sheetName);
                     if (!info) {
-                        return {
-                            message: 'Not found',
+                        throw {
+                            message: `Error get sheet info for ${id}`,
                         }
                     }
-                    sheetName = `'${sheetName}'!A1:${xcelPositionToColumnName(width)}${info.rowCount}`;
+                    return `'${sheetName}'!A1:${xcelPositionToColumnName(width)}${info.rowCount}`;
                 }
+                return sheetName;
+            }
+            async function readDataByColumnName(sheetName: string, width: number) {
+                sheetName = await getSheetRange(sheetName, width);
                 const ret = await read({ id, range: sheetName });
                 if (!ret.values) {
                     throw {
@@ -250,6 +255,22 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 }
             }
 
+            const updateValues = (range: string, values: string[][], opts?: IGoogleUpdateParms) => {
+                if (!opts) {
+                    opts = {
+                        valueInputOption: 'USER_ENTERED'
+                    }
+                }
+                if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
+                return doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
+                    values,
+                })
+            };
+
+            async function autoUpdateValues(sheetName: string, values: string[][], opts?: IGoogleUpdateParms) {
+                const range = await getSheetRange(sheetName, values[0].length);
+                return updateValues(range, values, opts);
+            }
             return {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 append: (range, data, ops) => append({ id, range }, data, ops),
@@ -257,17 +278,8 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 sheetInfo,
                 createSheet,
                 autoCreateSheet,
-                updateValues: (range:string, values: string[][], opts?: IGoogleUpdateParms) => {
-                    if (!opts) {
-                        opts = {
-                            valueInputOption: 'USER_ENTERED'
-                        }
-                    }
-                    if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
-                    return doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
-                        values,
-                    })
-                },
+                updateValues,
+                autoUpdateValues,
                 readDataByColumnName,
                 addSheet: async (title: string) => {
                     const sheetsInfo = await sheetInfo();                
