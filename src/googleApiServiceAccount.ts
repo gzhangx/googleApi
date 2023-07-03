@@ -5,7 +5,7 @@
 //'https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&response_type=code&client_id=client_id&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob'
 
 import { doHttpRequest, HttpRequestMethod } from './httpRequest';
-import { getFormData } from './util'
+import { getFormData, xcelPositionToColumnName } from './util'
 import { pick } from 'lodash';
 import jwt from 'jsonwebtoken';
 
@@ -61,21 +61,27 @@ export interface IGoogleUpdateParms {
 interface IIdRange {
     id: string; range: string;
 }
-type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => Promise<any>;
-type IReadFunc = (idRng: IIdRange) => Promise<any>;
+interface IReadReturn {
+    values: string[][];
+}
+type IDoOpReturn = Promise<string | object | Buffer>;
+type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => IDoOpReturn;
+type IReadFunc = (idRng: IIdRange) => Promise<IReadReturn>;
 export interface IGoogleClient {
     getToken: () => string;
-    doBatchUpdate: (id: string, data: any) => Promise<any>;
+    doBatchUpdate: (id: string, data: any) => IDoOpReturn;
     append: IAppendFunc;
     read: IReadFunc;
     getSheetOps: (id: string) => {
-        doBatchUpdate: (data: any) => Promise<any>;
-        append: (range:string, data: any, opts?: any) => Promise<any>;
-        read: (range: string) => Promise<any>;
+        doBatchUpdate: (data: any) => IDoOpReturn;
+        append: (range: string, data: any, opts?: any) => IDoOpReturn;
+        read: (range: string) => IDoOpReturn;
+        readDataByColumnName: (sheetName: string, width: number) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
         sheetInfo: ()=>Promise<ISheetInfoSimple[]>;
-        createSheet: (sheetId: string, title: string)=>Promise<any>;
-        updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<any>;
-        addSheet: (title: string)=>Promise<any>;
+        createSheet: (sheetId: string, title: string) => IDoOpReturn;
+        autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
+        updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
+        addSheet: (title: string) => IDoOpReturn;
     };
 }
 
@@ -157,7 +163,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
-    const read: IReadFunc = async ({ id, range }) => doOp('GET', id, `/values/${range}`);
+    const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as IReadReturn;
     return {
         //access_token,
         //expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
@@ -194,12 +200,63 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     } as ISheetInfoSimple;
                 })
             };
+
+            ///  create sheet and deduct sheet Id from existing
+            const autoCreateSheet = async (title: string) => {
+                const sheets = await sheetInfo();
+                const sheet = sheets.find(s => s.title === title);
+                if (sheet) return {
+                    message: 'found'
+                };
+                const maxId = sheets.reduce((acc, s) => {
+                    if (s.sheetId > acc) {
+                        acc = s.sheetId;
+                    }
+                    return acc;
+                }, 0) + 1;
+
+                return await createSheet(maxId.toString(), title);
+            };
+
+            async function readDataByColumnName(sheetName: string, width: number) {
+                if (sheetName.indexOf('!') < 0) {
+                    sheetName = sheetName.trim();
+                    const sheetInfos = await sheetInfo();
+                    const info = sheetInfos.find(s => s.title === sheetName);
+                    if (!info) {
+                        return {
+                            message: 'Not found',
+                        }
+                    }
+                    sheetName = `'${sheetName}'!A1:${xcelPositionToColumnName(width)}${info.rowCount}`;
+                }
+                const ret = await read({ id, range: sheetName });
+                if (!ret.values) {
+                    throw {
+                        message: `bad data found for id ${id} sheet ${sheetName}`,
+                    }
+                }
+                const columns = ret.values[0];
+                const dataRow = ret.values.slice(1);
+                const data = dataRow.map(d => {
+                    return columns.reduce((acc, column, i) => {
+                        acc[column] = d[i];
+                        return acc;
+                    }, {} as { [name:string]:string});
+                });
+                return {
+                    message: 'OK',
+                    data,
+                }
+            }
+
             return {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 append: (range, data, ops) => append({ id, range }, data, ops),
                 read: range => read({ id, range }),
                 sheetInfo,
                 createSheet,
+                autoCreateSheet,
                 updateValues: (range:string, values: string[][], opts?: IGoogleUpdateParms) => {
                     if (!opts) {
                         opts = {
@@ -211,6 +268,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                         values,
                     })
                 },
+                readDataByColumnName,
                 addSheet: async (title: string) => {
                     const sheetsInfo = await sheetInfo();                
                     //input YYYY, sheetId,
