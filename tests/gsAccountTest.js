@@ -11,6 +11,9 @@ async function test() {
     const rrr = await ops.updateValues('Sheet1!G18:G18', [['2']]);
     console.log('update done')
     console.log(rrr)
+    await ops.clear('Sheet1!G18:G18');
+    console.log('cleared')
+    return;
     if (d) return;
     if (!cli) return console.log('failed to get client');
     const id = '1MO27odjCsxk6MWL0DygubU53hrtt3OB8SEnqjpUHJ-U';

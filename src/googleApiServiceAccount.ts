@@ -76,6 +76,7 @@ export interface IGoogleClient {
         doBatchUpdate: (data: any) => IDoOpReturn;
         append: (range: string, data: any, opts?: any) => IDoOpReturn;
         read: (range: string) => IDoOpReturn;
+        clear: (range: string) => IDoOpReturn;
         readDataByColumnName: (sheetName: string, width: number) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
         sheetInfo: ()=>Promise<ISheetInfoSimple[]>;
         createSheet: (sheetId: string, title: string) => IDoOpReturn;
@@ -165,6 +166,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
     const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as IReadReturn;
+    const clear: IReadFunc = async ({ id, range }) => (await doOp('POST', id, `/values/${range}:clear`)) as IReadReturn;
     return {
         //access_token,
         //expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
@@ -172,7 +174,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         getToken,
         doBatchUpdate,
         append,
-        read,
+        read,        
         getSheetOps: id => {
             const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
             const createSheet = async (sheetId: string, title: string) => {
@@ -275,6 +277,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 append: (range, data, ops) => append({ id, range }, data, ops),
                 read: range => read({ id, range }),
+                clear: range=>clear({id, range}),
                 sheetInfo,
                 createSheet,
                 autoCreateSheet,
