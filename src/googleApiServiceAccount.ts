@@ -67,24 +67,25 @@ interface IReadReturn {
 type IDoOpReturn = Promise<string | object | Buffer>;
 type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => IDoOpReturn;
 type IReadFunc = (idRng: IIdRange) => Promise<IReadReturn>;
+type IGetSheetOpsReturn = {
+    doBatchUpdate: (data: any) => IDoOpReturn;
+    append: (range: string, data: any, opts?: any) => IDoOpReturn;
+    read: (range: string) => IDoOpReturn;
+    clear: (range: string) => IDoOpReturn;
+    readDataByColumnName: (sheetName: string, width: number) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
+    sheetInfo: () => Promise<ISheetInfoSimple[]>;
+    createSheet: (sheetId: string, title: string) => IDoOpReturn;
+    autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
+    updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
+    autoUpdateValues: (sheetName: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
+    addSheet: (title: string) => IDoOpReturn;
+};
 export interface IGoogleClient {
     getToken: () => string;
     doBatchUpdate: (id: string, data: any) => IDoOpReturn;
     append: IAppendFunc;
     read: IReadFunc;
-    getSheetOps: (id: string) => {
-        doBatchUpdate: (data: any) => IDoOpReturn;
-        append: (range: string, data: any, opts?: any) => IDoOpReturn;
-        read: (range: string) => IDoOpReturn;
-        clear: (range: string) => IDoOpReturn;
-        readDataByColumnName: (sheetName: string, width: number) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
-        sheetInfo: ()=>Promise<ISheetInfoSimple[]>;
-        createSheet: (sheetId: string, title: string) => IDoOpReturn;
-        autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
-        updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
-        autoUpdateValues: (sheetName: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
-        addSheet: (title: string) => IDoOpReturn;
-    };
+    getSheetOps: (id: string) => IGetSheetOpsReturn;
 }
 
 export interface IGoogleToken {
