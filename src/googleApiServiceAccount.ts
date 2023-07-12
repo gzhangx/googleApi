@@ -67,7 +67,7 @@ interface IReadReturn {
 type IDoOpReturn = Promise<string | object | Buffer>;
 type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => IDoOpReturn;
 type IReadFunc = (idRng: IIdRange) => Promise<IReadReturn>;
-type IGetSheetOpsReturn = {
+export type IGetSheetOpsReturn = {
     doBatchUpdate: (data: any) => IDoOpReturn;
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
     read: (range: string) => IDoOpReturn;
