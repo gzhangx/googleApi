@@ -1,18 +1,27 @@
 
 const gs = require('../lib/googleApiServiceAccount')
-const creds = require('../../../../temp/temp/googleServiceAcctTest/g.json')
+const creds = require('../../googleSvcAccount-pem.json')
+const util = require('../lib/util');
 test().catch(err => {
     console.log(err);
 })
 async function test() {
+    //return console.log(util.xcelPositionToColumnName(0));
     const cli = await gs.getClient(creds);
     const ops = await cli.getSheetOps('1u_AR8y7iCRPGyDhdOb1cHhjL-vclCIxuLkMhIxd08mU')
     console.log('update val')
-    const rrr = await ops.updateValues('Sheet1!G18:G18', [['2']]);
+    const rrr = await ops.updateValues('Sheet1!G18:G18', [['3']]);
     console.log('update done')
     console.log(rrr)
     await ops.clear('Sheet1!G18:G18');
     console.log('cleared')
+    await ops.autoUpdateValuesWithOffset('Sheet1', [
+        ['1', '2'],
+        ['3', '4'],
+    ], {
+        row: 2,
+        col: 0,
+    })
     return;
     if (d) return;
     if (!cli) return console.log('failed to get client');

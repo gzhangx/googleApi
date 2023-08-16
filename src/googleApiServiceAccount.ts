@@ -67,6 +67,7 @@ interface IReadReturn {
 type IDoOpReturn = Promise<string | object | Buffer>;
 type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => IDoOpReturn;
 type IReadFunc = (idRng: IIdRange) => Promise<IReadReturn>;
+type RowColOffset = { row: number;  col: number};
 export type IGetSheetOpsReturn = {
     doBatchUpdate: (data: any) => IDoOpReturn;
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
@@ -78,6 +79,7 @@ export type IGetSheetOpsReturn = {
     autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
     updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
     autoUpdateValues: (sheetName: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
+    autoUpdateValuesWithOffset: (sheetName: string, values: string[][], offset: RowColOffset, opts?: IGoogleUpdateParms) => IDoOpReturn;
     addSheet: (title: string) => IDoOpReturn;
 };
 export interface IGoogleClient {
@@ -222,7 +224,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 return await createSheet(maxId.toString(), title);
             };
 
-            async function getSheetRange(sheetName: string, width: number) {
+            async function getSheetRange(sheetName: string, width: number, offset: RowColOffset = {row:0, col:0}) {
                 if (sheetName.indexOf('!') < 0) {
                     sheetName = sheetName.trim();
                     const sheetInfos = await sheetInfo();
@@ -232,7 +234,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                             message: `Error get sheet info for ${id}`,
                         }
                     }
-                    return `'${sheetName}'!A1:${xcelPositionToColumnName(width)}${info.rowCount}`;
+                    return `'${sheetName}'!${xcelPositionToColumnName(offset.col) }${1 + offset.row}:${xcelPositionToColumnName(width + offset.col)}${info.rowCount + offset.row}`;
                 }
                 return sheetName;
             }
@@ -274,6 +276,12 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 const range = await getSheetRange(sheetName, values[0].length);
                 return updateValues(range, values, opts);
             }
+
+            async function autoUpdateValuesWithOffset(sheetName: string, values: string[][], offset: RowColOffset, opts?: IGoogleUpdateParms) {
+                const range = await getSheetRange(sheetName, values[0].length, offset);
+                return updateValues(range, values, opts);
+            }
+
             return {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 append: (range, data, ops) => append({ id, range }, data, ops),
@@ -284,6 +292,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 autoCreateSheet,
                 updateValues,
                 autoUpdateValues,
+                autoUpdateValuesWithOffset,
                 readDataByColumnName,
                 addSheet: async (title: string) => {
                     const sheetsInfo = await sheetInfo();                
