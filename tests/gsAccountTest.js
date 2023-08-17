@@ -16,12 +16,15 @@ async function test() {
     await ops.clear('Sheet1!G18:G18');
     console.log('cleared')
     await ops.autoUpdateValuesWithOffset('Sheet1', [
-        ['1', '2'],
+        ['col1', 'col2'],
         ['3', '4'],
     ], {
         row: 2,
-        col: 0,
+        col: 2,
     })
+
+    const reads = await ops.readDataByColumnName('Sheet1', 2, {row: 2, col:2});
+    console.log(reads);
     return;
     if (d) return;
     if (!cli) return console.log('failed to get client');
