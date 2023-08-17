@@ -76,6 +76,8 @@ export type IGetSheetOpsReturn = {
     readDataByColumnName: (sheetName: string, width: number, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
     sheetInfo: () => Promise<ISheetInfoSimple[]>;
     createSheet: (sheetId: string, title: string) => IDoOpReturn;
+    deleteSheet: (sheetId: number) => IDoOpReturn;
+    deleteSheetByName: (sheetTitle: string) => IDoOpReturn;
     autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
     updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
     autoUpdateValues: (sheetName: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
@@ -194,6 +196,28 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     ]
                 })
             };
+            const deleteSheet = async (sheetId: number) => {
+                return doBatchUpdate(id, {
+                    requests: [
+                        {
+                            deleteSheet: {
+                                sheetId,
+                            }
+                        }
+                    ]
+                })
+            };
+
+            const deleteSheetByName = async (title: string) => {
+                const sheets = await sheetInfo();
+                const sheet = sheets.find(s => s.title === title);
+                if (sheet) {
+                    return await deleteSheet(sheet.sheetId);
+                }
+                return {
+                    message: 'not found',
+                }
+            }
             const sheetInfo = async () => {
                 const sheetInfos = await getInfo();
                 return sheetInfos.sheets.map(s => {
@@ -206,7 +230,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     } as ISheetInfoSimple;
                 })
             };
-
+            
             ///  create sheet and deduct sheet Id from existing
             const autoCreateSheet = async (title: string) => {
                 const sheets = await sheetInfo();
@@ -294,6 +318,8 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 autoUpdateValues,
                 autoUpdateValuesWithOffset,
                 readDataByColumnName,
+                deleteSheet,
+                deleteSheetByName,
                 addSheet: async (title: string) => {
                     const sheetsInfo = await sheetInfo();                
                     //input YYYY, sheetId,

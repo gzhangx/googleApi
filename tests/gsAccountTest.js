@@ -25,6 +25,27 @@ async function test() {
 
     const reads = await ops.readDataByColumnName('Sheet1', 2, {row: 2, col:2});
     console.log(reads);
+
+
+    const addSheetRsp = await ops.addSheet('test1');
+    if (addSheetRsp.replies) {
+        console.log(addSheetRsp.replies[0]);
+    } else {
+        await ops.deleteSheetByName('test1');
+    }
+    /*
+    {
+  addSheet: {
+    properties: {
+      sheetId: 3,
+      title: 'test1',
+      index: 5,
+      sheetType: 'GRID',
+      gridProperties: [Object]
+    }
+  }
+}
+    */
     return;
     if (d) return;
     if (!cli) return console.log('failed to get client');
