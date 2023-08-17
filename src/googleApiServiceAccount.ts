@@ -73,7 +73,8 @@ export type IGetSheetOpsReturn = {
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
     read: (range: string) => IDoOpReturn;
     clear: (range: string) => IDoOpReturn;
-    readDataByColumnName: (sheetName: string, width: number, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
+    readDataByColumnName: (sheetName: string, readSize: RowColOffset, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
+    readData: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data ?: (string[][]), message: string }>;
     sheetInfo: () => Promise<ISheetInfoSimple[]>;
     createSheet: (sheetId: string, title: string) => IDoOpReturn;
     deleteSheet: (sheetId: number) => IDoOpReturn;
@@ -248,7 +249,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 return await createSheet(maxId.toString(), title);
             };
 
-            async function getSheetRange(sheetName: string, width: number, offset: RowColOffset = {row:0, col:0}) {
+            async function getSheetRange(sheetName: string, readSize: RowColOffset = {row:0, col:0}, offset: RowColOffset = {row:0, col:0}) {
                 if (sheetName.indexOf('!') < 0) {
                     sheetName = sheetName.trim();
                     const sheetInfos = await sheetInfo();
@@ -258,12 +259,19 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                             message: `Error get sheet info for ${id}`,
                         }
                     }
-                    return `'${sheetName}'!${xcelPositionToColumnName(offset.col) }${1 + offset.row}:${xcelPositionToColumnName(width + offset.col)}${info.rowCount + offset.row}`;
+                    if (!readSize.col) readSize.col = info.columnCount;
+                    let endCol = readSize.col + offset.col;          
+                    if (endCol > info.columnCount) endCol = info.columnCount;
+
+                    if (!readSize.row) readSize.row = info.rowCount;
+                    let endRow = readSize.row + offset.row;
+                    if (endRow > info.rowCount) endRow = info.rowCount;
+                    return `'${sheetName}'!${xcelPositionToColumnName(offset.col) }${1 + offset.row}:${xcelPositionToColumnName(endCol)}${endRow}`;
                 }
                 return sheetName;
             }
-            async function readDataByColumnName(sheetName: string, width: number, offset: RowColOffset = {row: 0, col:0}) {
-                sheetName = await getSheetRange(sheetName, width, offset);
+            async function readDataByColumnName(sheetName: string, readSize: RowColOffset, offset: RowColOffset = {row: 0, col:0}) {
+                sheetName = await getSheetRange(sheetName, readSize, offset);
                 const ret = await read({ id, range: sheetName });
                 if (!ret.values) {
                     throw {
@@ -284,6 +292,20 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 }
             }
 
+            async function readData(sheetName: string, readSize: RowColOffset, offset: RowColOffset = { row: 0, col: 0 }) {
+                sheetName = await getSheetRange(sheetName, readSize, offset);
+                const ret = await read({ id, range: sheetName });
+                if (!ret.values) {
+                    throw {
+                        message: `bad data found for id ${id} sheet ${sheetName}`,
+                    }
+                }                
+                return {
+                    message: 'OK',
+                    data: ret.values,
+                }
+            }
+
             const updateValues = (range: string, values: string[][], opts?: IGoogleUpdateParms) => {
                 if (!opts) {
                     opts = {
@@ -297,12 +319,12 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             };
 
             async function autoUpdateValues(sheetName: string, values: string[][], opts?: IGoogleUpdateParms) {
-                const range = await getSheetRange(sheetName, values[0].length);
+                const range = await getSheetRange(sheetName);
                 return updateValues(range, values, opts);
             }
 
             async function autoUpdateValuesWithOffset(sheetName: string, values: string[][], offset: RowColOffset, opts?: IGoogleUpdateParms) {
-                const range = await getSheetRange(sheetName, values[0].length, offset);
+                const range = await getSheetRange(sheetName, offset);
                 return updateValues(range, values, opts);
             }
 
@@ -318,6 +340,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 autoUpdateValues,
                 autoUpdateValuesWithOffset,
                 readDataByColumnName,
+                readData,
                 deleteSheet,
                 deleteSheetByName,
                 addSheet: async (title: string) => {

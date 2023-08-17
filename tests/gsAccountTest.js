@@ -23,8 +23,11 @@ async function test() {
         col: 2,
     })
 
-    const reads = await ops.readDataByColumnName('Sheet1', 2, {row: 2, col:2});
+    const reads = await ops.readDataByColumnName('Sheet1', {row: 2, col:2});
     console.log(reads);
+
+    const readsRaw = await ops.readData('Sheet1', { row: 3, col: 40 });
+    console.log(readsRaw, 'readsRaw');
 
 
     const addSheetRsp = await ops.addSheet('test1');
