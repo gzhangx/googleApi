@@ -73,7 +73,7 @@ export type IGetSheetOpsReturn = {
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
     read: (range: string) => IDoOpReturn;
     clear: (range: string) => IDoOpReturn;
-    readDataByColumnName: (sheetName: string, readSize: RowColOffset, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
+    readDataByColumnName: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
     readData: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data ?: (string[][]), message: string }>;
     sheetInfo: () => Promise<ISheetInfoSimple[]>;
     createSheet: (sheetId: string, title: string) => IDoOpReturn;
@@ -270,7 +270,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 }
                 return sheetName;
             }
-            async function readDataByColumnName(sheetName: string, readSize: RowColOffset, offset: RowColOffset = {row: 0, col:0}) {
+            async function readDataByColumnName(sheetName: string, readSize: RowColOffset = { row: 0, col: 0 }, offset: RowColOffset = {row: 0, col:0}) {
                 sheetName = await getSheetRange(sheetName, readSize, offset);
                 const ret = await read({ id, range: sheetName });
                 if (!ret.values) {
