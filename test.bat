@@ -1,2 +1,3 @@
 call node_modules\.bin\tsc
-call node lib\tests\mstest
+rem call node lib\tests\mstest
+call node tests\gsAccountTest.js

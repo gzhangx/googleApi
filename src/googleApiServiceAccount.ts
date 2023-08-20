@@ -81,8 +81,7 @@ export type IGetSheetOpsReturn = {
     deleteSheetByName: (sheetTitle: string) => IDoOpReturn;
     autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
     updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
-    autoUpdateValues: (sheetName: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
-    autoUpdateValuesWithOffset: (sheetName: string, values: string[][], offset: RowColOffset, opts?: IGoogleUpdateParms) => IDoOpReturn;
+    autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => IDoOpReturn;
     addSheet: (title: string) => IDoOpReturn;
 };
 export interface IGoogleClient {
@@ -318,13 +317,13 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 })
             };
 
-            async function autoUpdateValues(sheetName: string, values: string[][], opts?: IGoogleUpdateParms) {
-                const range = await getSheetRange(sheetName);
-                return updateValues(range, values, opts);
-            }
-
-            async function autoUpdateValuesWithOffset(sheetName: string, values: string[][], offset: RowColOffset, opts?: IGoogleUpdateParms) {
-                const range = await getSheetRange(sheetName, offset);
+            async function autoUpdateValues(sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) {
+                if (!values || !values.length) return null;
+                const writeSize: RowColOffset = {
+                    col: values[0].length,
+                    row: values.length,
+                };
+                const range = await getSheetRange(sheetName, writeSize, offset);
                 return updateValues(range, values, opts);
             }
 
@@ -338,7 +337,6 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 autoCreateSheet,
                 updateValues,
                 autoUpdateValues,
-                autoUpdateValuesWithOffset,
                 readDataByColumnName,
                 readData,
                 deleteSheet,

@@ -15,7 +15,7 @@ async function test() {
     console.log(rrr)
     await ops.clear('Sheet1!G18:G18');
     console.log('cleared')
-    await ops.autoUpdateValuesWithOffset('Sheet1', [
+    await ops.autoUpdateValues('Sheet1', [
         ['col1', 'col2'],
         ['3', '4'],
     ], {
