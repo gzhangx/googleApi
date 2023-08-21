@@ -67,9 +67,18 @@ interface IReadReturn {
 type IDoOpReturn = Promise<string | object | Buffer>;
 type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => IDoOpReturn;
 type IReadFunc = (idRng: IIdRange) => Promise<IReadReturn>;
-type RowColOffset = { row: number;  col: number};
+type RowColOffset = { row: number; col: number };
+type IDoOpWithErrorReturn = {
+    error?: {
+        code: number;
+        message: string;
+        status: string;    
+    }
+}
+
 export type IGetSheetOpsReturn = {
     doBatchUpdate: (data: any) => IDoOpReturn;
+    appendRowCols: (sheetId: number, ap: RowColOffset) => IDoOpReturn;
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
     read: (range: string) => IDoOpReturn;
     clear: (range: string) => IDoOpReturn;
@@ -80,8 +89,8 @@ export type IGetSheetOpsReturn = {
     deleteSheet: (sheetId: number) => IDoOpReturn;
     deleteSheetByName: (sheetTitle: string) => IDoOpReturn;
     autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
-    updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => IDoOpReturn;
-    autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => IDoOpReturn;
+    updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<IDoOpWithErrorReturn>;
+    autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => Promise<IDoOpWithErrorReturn>;
     addSheet: (title: string) => IDoOpReturn;
 };
 export interface IGoogleClient {
@@ -170,8 +179,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
-    const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as IReadReturn;
-    const clear: IReadFunc = async ({ id, range }) => (await doOp('POST', id, `/values/${range}:clear`)) as IReadReturn;
+    const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as IReadReturn;    
     return {
         //access_token,
         //expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
@@ -182,6 +190,9 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         read,        
         getSheetOps: id => {
             const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
+            const clear = async (range:string) => {                
+                return await doOp('POST', id, `/values/${range}:clear`) as IReadReturn;
+            }
             const createSheet = async (sheetId: string, title: string) => {
                 return doBatchUpdate(id, {
                     requests: [
@@ -259,15 +270,50 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                         }
                     }
                     if (!readSize.col) readSize.col = info.columnCount;
-                    let endCol = readSize.col + offset.col;          
-                    if (endCol > info.columnCount) endCol = info.columnCount;
+                    const endCol = readSize.col + offset.col;          
+
+                    const appendOps: RowColOffset = {
+                        row: 0,
+                        col: 0,
+                    }
+                    if (endCol > info.columnCount) {
+                        appendOps.col = endCol - info.columnCount;
+                    }
 
                     if (!readSize.row) readSize.row = info.rowCount;
-                    let endRow = readSize.row + offset.row;
-                    if (endRow > info.rowCount) endRow = info.rowCount;
+                    const endRow = readSize.row + offset.row;
+                    if (endRow > info.rowCount) {
+                        appendOps.row = endRow - info.rowCount;
+                    }
+                    if (appendOps.col || appendOps.row) {
+                        await appendRowCols(info.sheetId, appendOps);
+                    }
                     return `'${sheetName}'!${xcelPositionToColumnName(offset.col) }${1 + offset.row}:${xcelPositionToColumnName(endCol)}${endRow}`;
                 }
                 return sheetName;
+            }
+
+            async function appendRowCols(sheetId: number, ap: RowColOffset) {
+                const requests = [];
+                if (ap.col) {                                  
+                    requests.push({
+                        appendDimension: {
+                            sheetId,
+                            dimension: 'COLUMNS',
+                            length: ap.col,
+                        }
+                    })
+                }
+                if (ap.row) {
+                    requests.push({
+                        appendDimension: {
+                            sheetId,
+                            dimension: 'ROWS',
+                            length: ap.row,
+                        }
+                    },)
+                }
+                return doBatchUpdate(id, { requests });
             }
             async function readDataByColumnName(sheetName: string, readSize: RowColOffset = { row: 0, col: 0 }, offset: RowColOffset = {row: 0, col:0}) {
                 sheetName = await getSheetRange(sheetName, readSize, offset);
@@ -305,33 +351,34 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 }
             }
 
-            const updateValues = (range: string, values: string[][], opts?: IGoogleUpdateParms) => {
+            const updateValues = async (range: string, values: string[][], opts?: IGoogleUpdateParms) => {
                 if (!opts) {
                     opts = {
                         valueInputOption: 'USER_ENTERED'
                     }
                 }
                 if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
-                return doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
+                return await doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
                     values,
-                })
+                }) as Promise<IDoOpWithErrorReturn>;
             };
 
-            async function autoUpdateValues(sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) {
+            async function autoUpdateValues(sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms): Promise<IDoOpWithErrorReturn> {
                 if (!values || !values.length) return null;
                 const writeSize: RowColOffset = {
                     col: values[0].length,
                     row: values.length,
                 };
                 const range = await getSheetRange(sheetName, writeSize, offset);
-                return updateValues(range, values, opts);
+                return await updateValues(range, values, opts) as Promise<IDoOpWithErrorReturn>;
             }
 
             return {
                 doBatchUpdate: data => doBatchUpdate(id, data),
+                appendRowCols,
                 append: (range, data, ops) => append({ id, range }, data, ops),
                 read: range => read({ id, range }),
-                clear: range=>clear({id, range}),
+                clear,
                 sheetInfo,
                 createSheet,
                 autoCreateSheet,

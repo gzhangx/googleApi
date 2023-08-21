@@ -9,11 +9,12 @@ async function test() {
     //return console.log(util.xcelPositionToColumnName(0));
     const cli = await gs.getClient(creds);
     const ops = await cli.getSheetOps('1u_AR8y7iCRPGyDhdOb1cHhjL-vclCIxuLkMhIxd08mU')
-    console.log('update val')
-    const rrr = await ops.updateValues('Sheet1!G18:G18', [['3']]);
-    console.log('update done')
-    console.log(rrr)
-    await ops.clear('Sheet1!G18:G18');
+    //console.log('update val')
+    //const rrr = await ops.updateValues('Sheet1!G18:G18', [['3']]);
+    //console.log('update done')
+    //console.log(rrr)
+    //await ops.clear('Sheet1!G18:G18');
+    await ops.clear('Sheet1');
     console.log('cleared')
     await ops.autoUpdateValues('Sheet1', [
         ['col1', 'col2'],
