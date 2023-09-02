@@ -340,13 +340,10 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             async function readData(sheetName: string, readSize: RowColOffset, offset: RowColOffset = { row: 0, col: 0 }) {
                 sheetName = await getSheetRange(sheetName, readSize, offset);
                 const ret = await read({ id, range: sheetName });
-                if (!ret.values) {
-                    throw {
-                        message: `bad data found for id ${id} sheet ${sheetName}`,
-                    }
-                }                
+                
+                const message = ret.values ? 'OK' : `bad data found for id ${id} sheet ${sheetName}`;                
                 return {
-                    message: 'OK',
+                    message,
                     data: ret.values,
                 }
             }
