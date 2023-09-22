@@ -81,7 +81,7 @@ export type IGetSheetOpsReturn = {
     appendRowCols: (sheetId: number, ap: RowColOffset) => IDoOpReturn;
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
     read: (range: string) => IDoOpReturn;
-    clear: (range: string) => IDoOpReturn;
+    clear: (sheetName: string, offset?: RowColOffset, clearRange?: RowColOffset) => IDoOpReturn;
     readDataByColumnName: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
     readData: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data ?: (string[][]), message: string }>;
     sheetInfo: () => Promise<ISheetInfoSimple[]>;
@@ -92,6 +92,7 @@ export type IGetSheetOpsReturn = {
     updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<IDoOpWithErrorReturn>;
     autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => Promise<IDoOpWithErrorReturn>;
     addSheet: (title: string) => IDoOpReturn;
+    getSheetRange: (sheetName: string, readSize: RowColOffset, offset: RowColOffset) => Promise<string>;
 };
 export interface IGoogleClient {
     getToken: () => string;
@@ -190,7 +191,8 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         read,        
         getSheetOps: id => {
             const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
-            const clear = async (range:string) => {                
+            const clear = async (sheetName: string, offset?: RowColOffset, clearRange?: RowColOffset) => {                
+                const range = await getSheetRange(sheetName, clearRange, offset);                
                 return await doOp('POST', id, `/values/${range}:clear`) as IReadReturn;
             }
             const createSheet = async (sheetId: string, title: string) => {
@@ -385,6 +387,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 readData,
                 deleteSheet,
                 deleteSheetByName,
+                getSheetRange,
                 addSheet: async (title: string) => {
                     const sheetsInfo = await sheetInfo();                
                     //input YYYY, sheetId,

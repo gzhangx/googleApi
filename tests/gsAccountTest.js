@@ -14,8 +14,9 @@ async function test() {
     //console.log('update done')
     //console.log(rrr)
     //await ops.clear('Sheet1!G18:G18');
-    await ops.clear('Sheet1');
+    await ops.clear('Sheet1', {col: 1, row:1});
     console.log('cleared')
+    if (cli) return;
     await ops.autoUpdateValues('Sheet1', [
         ['col1', 'col2'],
         ['3', '4'],
