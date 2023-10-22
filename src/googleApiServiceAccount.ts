@@ -11,9 +11,11 @@ import jwt from 'jsonwebtoken';
 
 
 export interface IServiceAccountCreds {
-    private_key_id: string;
-    private_key: string;    
-    client_email: string;    
+    private_key_id?: string;
+    private_key?: string;    
+    client_email?: string;
+
+    token?: string; //if we obtain token directly.  If this has value, no need for private_key etc above
 }
 
 export interface IGoogleSheetGridProperties {
@@ -128,14 +130,17 @@ function betterErr(desc: string) {
     }
 }
 export function getClient(creds: IServiceAccountCreds): IGoogleClient {
-    if (!creds.private_key || !creds.private_key_id) throw `doRefresh needs private_key and private_key_id in creds`;
-    if (!creds.client_email) throw `missing client_email from creds`;
+    if (!creds.token) {
+        if (!creds.private_key || !creds.private_key_id) throw `doRefresh needs private_key and private_key_id in creds`;
+        if (!creds.client_email) throw `missing client_email from creds`;
+    }
     const curClientData = {
         expirationTime: 0,
         curToken: '',
     }
     
     const getToken = () => {
+        if (creds.token) return creds.token;
         const curTime = Math.floor(Date.now() / 1000);
         if (curClientData.curToken && curClientData.expirationTime < curTime) {
             return curClientData.curToken;
