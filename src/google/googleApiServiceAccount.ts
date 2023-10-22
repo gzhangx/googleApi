@@ -4,8 +4,8 @@
 //return rootUrl + '?' + querystring.stringify(opts);
 //'https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fspreadsheets&response_type=code&client_id=client_id&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob'
 
-import { doHttpRequest, HttpRequestMethod } from './httpRequest';
-import { getFormData, xcelPositionToColumnName } from './util'
+import { doHttpRequest, HttpRequestMethod } from '../httpRequest';
+import { getFormData, xcelPositionToColumnName } from '../util'
 import { pick } from 'lodash';
 import jwt from 'jsonwebtoken';
 

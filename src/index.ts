@@ -1,7 +1,7 @@
 import * as util from './util'
 //don't use any more, use gsAccount instead
 import { getClient, getClientByEnv, getTokenFromCode, getClientCredsByEnv } from './googleApi'
-import * as gsAccount from './googleApiServiceAccount'
+import * as gsAccount from './google/googleApiServiceAccount'
 
 //google should not be used
 const google = {

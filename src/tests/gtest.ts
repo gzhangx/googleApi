@@ -1,5 +1,5 @@
 import { getClientByEnv } from '../googleApi'
-import * as gs from '../googleApiServiceAccount'
+import * as gs from '../google/googleApiServiceAccount'
 import { pick } from 'lodash';
 import * as fs from 'fs';
 
