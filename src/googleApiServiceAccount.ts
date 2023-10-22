@@ -22,6 +22,8 @@ export interface IGoogleSheetGridProperties {
     frozenRowCount: number;
     frozenColumnCount: number;
 }
+
+//https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#Spreadsheet
 interface IGoogleSheetInfo {
     spreadsheetId: string;
     properties: {
@@ -100,6 +102,7 @@ export interface IGoogleClient {
     append: IAppendFunc;
     read: IReadFunc;
     getSheetOps: (id: string) => IGetSheetOpsReturn;
+    createTopNewSheet: (data: IGoogleSheetInfo) => Promise<IGoogleSheetInfo>;
 }
 
 export interface IGoogleToken {
@@ -157,8 +160,9 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         curClientData.expirationTime = curTime + 3600 - 100;
         return curClientData.curToken;
     };
+    const rootUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
     const doOp = (op: HttpRequestMethod, id: string, postFix: string, data?: string | object) => {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}${postFix}`;
+        const url = `${rootUrl}/${id}${postFix}`;
         return doHttpRequest({
             url,
             headers: {
@@ -169,6 +173,21 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             data,
         }).then(r => {
             return (r.data)
+        }).catch(betterErr(`doOps error ${url}`));
+    }
+
+    const createTopNewSheet = (data: IGoogleSheetInfo) => {
+        const url = rootUrl;
+        return doHttpRequest({
+            url,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${getToken()}`,
+            },
+            method: 'POST',
+            data,
+        }).then(r => {
+            return (r.data) as IGoogleSheetInfo;
         }).catch(betterErr(`doOps error ${url}`));
     }
     const doPost = (id:string, postFix:string, data:any) => doOp('POST', id, postFix, data);
@@ -188,7 +207,8 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         getToken,
         doBatchUpdate,
         append,
-        read,        
+        read,
+        createTopNewSheet,
         getSheetOps: id => {
             const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
             const clear = async (sheetName: string, offset?: RowColOffset, clearRange?: RowColOffset) => {                

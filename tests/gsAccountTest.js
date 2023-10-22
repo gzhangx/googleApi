@@ -5,9 +5,37 @@ const util = require('../lib/util');
 test().catch(err => {
     console.log(err);
 })
+
+async function testNewOps() {
+    const cli = await gs.getClient(creds);
+    const ops = await cli.getSheetOps('1iEsvkhV_IsGegrdllsKHMBA6K5FWBtb_CTNzaL-wlBo');
+    await ops.clear('Sheet1', { col: 1, row: 1 });
+    console.log('cleared')
+    const sheetInfo = await ops.sheetInfo();
+    console.log(sheetInfo, 'sheet info');
+    const updateRes = await ops.autoUpdateValues('Sheet1', [
+        ['col1', 'col2'],
+        ['3', '4'],
+    ])
+    console.log(updateRes, 'updateRes')
+
+    const reads = await ops.readDataByColumnName('Sheet1');
+    console.log(reads, 'reads');
+}
 async function test() {
+    return testNewOps();
     //return console.log(util.xcelPositionToColumnName(0));
     const cli = await gs.getClient(creds);
+    const createNewRes = await cli.createTopNewSheet({
+        //spreadsheetId: 'testid',
+        sheets: [],
+        properties: {
+            title: 'testspreadsheet',
+            locale: 'en_US',
+            defaultFormat: null,
+        }
+    });
+    console.log(createNewRes);
     const ops = await cli.getSheetOps('1u_AR8y7iCRPGyDhdOb1cHhjL-vclCIxuLkMhIxd08mU')
     //console.log('update val')
     //const rrr = await ops.updateValues('Sheet1!G18:G18', [['3']]);
