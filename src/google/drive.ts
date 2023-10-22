@@ -28,6 +28,6 @@ function addPermission(token: string, req: AddPermissionRequest) {
 
 export function getGoogleDriveOps(token: string) {
     return {
-        addPermission: req => addPermission(token, req),
+        addPermission: (req: AddPermissionRequest) => addPermission(token, req),
     }
 }

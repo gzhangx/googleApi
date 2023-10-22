@@ -1,14 +1,16 @@
 
-const gs = require('../lib/googleApiServiceAccount')
+const gs = require('../lib/google/googleApiServiceAccount')
 const creds = require('../../googleSvcAccount-pem.json')
 const util = require('../lib/util');
+const drive = require('../lib/google/drive')
 test().catch(err => {
     console.log(err);
 })
 
 async function testNewOps() {
-    const cli = await gs.getClient({
-        token: 'ya29.'
+    const token = 'ya29.-';
+    const cli = await gs.getClient({        
+        token
     });
     const ops = await cli.getSheetOps('1iEsvkhV_IsGegrdllsKHMBA6K5FWBtb_CTNzaL-wlBo');
     //await ops.clear('Sheet1', { col: 1, row: 1 });
@@ -22,7 +24,20 @@ async function testNewOps() {
             defaultFormat: null,
         }
     });
-    console.log(createNewRes,'createnew res')
+    console.log(createNewRes, 'createnew res')
+    
+    const driveOps = drive.getGoogleDriveOps(token);
+    const drivePermRes = await driveOps.addPermission({
+        fileId: createNewRes.spreadsheetId,
+        emailMessage: 'testtest from api',
+        sendNotificationEmail: true,
+        data: {
+            emailAddress: 'gzhangx@hotmail.com',
+            role: 'writer',
+            type:'user'
+        }
+    })
+    console.log(drivePermRes, 'drivePreRes');
     //const sheetInfo = await ops.sheetInfo();
     //console.log(sheetInfo, 'sheet info');
     //const updateRes = await ops.autoUpdateValues('Sheet1', [
