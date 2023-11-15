@@ -31,7 +31,7 @@ export async function doHttpRequest(
         if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
             return resolve({
                 ...rspData,
-                data: JSON.parse(rspData.data.toString('utf-8')),
+                data: rspData.data ? JSON.parse(rspData.data.toString('utf-8')) : rspData.data,
             });
         }
         resolve(rspData);
