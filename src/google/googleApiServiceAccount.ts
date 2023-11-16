@@ -34,7 +34,7 @@ interface IGoogleSheetInfo {
         autoRecalc: string;//ON_CHANGE
         timeZone: string;// "America/New_York",
         defaultFormat: any;
-    },
+    };
     sheets: {
         properties: {
             sheetId: number;
@@ -44,6 +44,29 @@ interface IGoogleSheetInfo {
             gridProperties: IGoogleSheetGridProperties
         };
     }[];
+    error?: {
+        code: number;
+        message: string;
+        status: string; //RESOURCE_EXHAUSTED
+        details: {
+            "@type": string; //type.googleapis.com/google.rpc.ErrorInfo
+            reason: string; //"RATE_LIMIT_EXCEEDED",
+            domain: string;  //'googleapis.com'
+            metadata: {
+                quota_location: string;  //"global";
+                quota_metric: string;  //"sheets.googleapis.com/read_requests",
+                consumer: string; //"projects/6xxx062",
+                quota_limit: string;  //"ReadRequestsPerMinutePerUser",
+                service: string;  //"sheets.googleapis.com",
+                quota_limit_value: string;  //"60"
+            };
+            // if @type === type.googleapis.com/google.rpc.Help
+            links: {
+                description: string;  //"Request a higher quota limit.",
+                url: string;  //"https://cloud.google.com/docs/quota#requesting_higher_quota"
+            }[];
+        }[];
+    }
 }
 
 export interface ISheetInfoSimple extends IGoogleSheetGridProperties{
@@ -258,6 +281,9 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             }
             const sheetInfo = async () => {
                 const sheetInfos = await getInfo();
+                if (sheetInfos.error) {
+                    throw sheetInfos.error;
+                }
                 return sheetInfos.sheets.map(s => {
                     const props = s.properties;
                     return {
@@ -293,7 +319,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     const info = sheetInfos.find(s => s.title === sheetName);
                     if (!info) {
                         throw {
-                            message: `Error get sheet info for ${id}`,
+                            message: `Error get sheet info for ${id} ${sheetName}`,
                         }
                     }
                     if (!readSize.col) readSize.col = info.columnCount;
