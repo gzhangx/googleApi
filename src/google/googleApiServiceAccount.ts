@@ -47,6 +47,7 @@ interface IGoogleErrorRet {
             url: string;  //"https://cloud.google.com/docs/quota#requesting_higher_quota"
         }[];
     }[];
+    url: string; //this is my own addon to record what action it is
 }
 
 //https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#Spreadsheet
@@ -203,7 +204,12 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             method: op,
             data,
         }).then(r => {
-            return (r.data)
+            const data = r.data as IDoOpUpdateWithErrorReturn;
+            if (data && data.error) {
+                data.error.url = url;
+                throw data.error;
+            }
+            return data;
         }).catch(betterErr(`doOps error ${url}`));
     }
 
@@ -230,7 +236,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
-    const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as IReadReturn;    
+    const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as any as IReadReturn;    
     return {
         //access_token,
         //expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
@@ -241,10 +247,10 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         read,
         createTopNewSheet,
         getSheetOps: id => {
-            const getInfo = () => doOp('GET', id, '') as Promise<IGoogleSheetInfo>;
+            const getInfo = () => doOp('GET', id, '') as any as Promise<IGoogleSheetInfo>;
             const clear = async (sheetName: string, offset?: RowColOffset, clearRange?: RowColOffset) => {                
                 const range = await getSheetRange(sheetName, clearRange, offset);                
-                return await doOp('POST', id, `/values/${range}:clear`) as IReadReturn;
+                return await doOp('POST', id, `/values/${range}:clear`) as any as IReadReturn;
             }
             const createSheet = async (sheetId: string, title: string) => {
                 return doBatchUpdate(id, {
