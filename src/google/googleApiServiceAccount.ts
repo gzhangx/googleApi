@@ -25,6 +25,30 @@ export interface IGoogleSheetGridProperties {
     frozenColumnCount: number;
 }
 
+interface IGoogleErrorRet {
+    code: number;
+    message: string;
+    status: string; //RESOURCE_EXHAUSTED
+    details: {
+        "@type": string; //type.googleapis.com/google.rpc.ErrorInfo
+        reason: string; //"RATE_LIMIT_EXCEEDED",
+        domain: string;  //'googleapis.com'
+        metadata: {
+            quota_location: string;  //"global";
+            quota_metric: string;  //"sheets.googleapis.com/read_requests",
+            consumer: string; //"projects/6xxx062",
+            quota_limit: string;  //"ReadRequestsPerMinutePerUser",
+            service: string;  //"sheets.googleapis.com",
+            quota_limit_value: string;  //"60"
+        };
+        // if @type === type.googleapis.com/google.rpc.Help
+        links: {
+            description: string;  //"Request a higher quota limit.",
+            url: string;  //"https://cloud.google.com/docs/quota#requesting_higher_quota"
+        }[];
+    }[];
+}
+
 //https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#Spreadsheet
 interface IGoogleSheetInfo {
     spreadsheetId: string;
@@ -44,29 +68,7 @@ interface IGoogleSheetInfo {
             gridProperties: IGoogleSheetGridProperties
         };
     }[];
-    error?: {
-        code: number;
-        message: string;
-        status: string; //RESOURCE_EXHAUSTED
-        details: {
-            "@type": string; //type.googleapis.com/google.rpc.ErrorInfo
-            reason: string; //"RATE_LIMIT_EXCEEDED",
-            domain: string;  //'googleapis.com'
-            metadata: {
-                quota_location: string;  //"global";
-                quota_metric: string;  //"sheets.googleapis.com/read_requests",
-                consumer: string; //"projects/6xxx062",
-                quota_limit: string;  //"ReadRequestsPerMinutePerUser",
-                service: string;  //"sheets.googleapis.com",
-                quota_limit_value: string;  //"60"
-            };
-            // if @type === type.googleapis.com/google.rpc.Help
-            links: {
-                description: string;  //"Request a higher quota limit.",
-                url: string;  //"https://cloud.google.com/docs/quota#requesting_higher_quota"
-            }[];
-        }[];
-    }
+    error?: IGoogleErrorRet;
 }
 
 export interface ISheetInfoSimple extends IGoogleSheetGridProperties{
@@ -95,12 +97,13 @@ type IDoOpReturn = Promise<string | object | Buffer>;
 type IAppendFunc = (idRng: IIdRange, data: any, opts?: any) => IDoOpReturn;
 type IReadFunc = (idRng: IIdRange) => Promise<IReadReturn>;
 type RowColOffset = { row: number; col: number };
-type IDoOpWithErrorReturn = {
-    error?: {
-        code: number;
-        message: string;
-        status: string;    
-    }
+type IDoOpUpdateWithErrorReturn = {
+    spreadsheetId: string; 
+    updatedRange: string;
+    updatedRows: number;
+    updatedColumns: number;
+    updatedCells: number;
+    error?: IGoogleErrorRet;
 }
 
 export type IGetSheetOpsReturn = {
@@ -116,8 +119,8 @@ export type IGetSheetOpsReturn = {
     deleteSheet: (sheetId: number) => IDoOpReturn;
     deleteSheetByName: (sheetTitle: string) => IDoOpReturn;
     autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
-    updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<IDoOpWithErrorReturn>;
-    autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => Promise<IDoOpWithErrorReturn>;
+    updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<IDoOpUpdateWithErrorReturn>;
+    autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => Promise<IDoOpUpdateWithErrorReturn>;
     addSheet: (title: string) => IDoOpReturn;
     getSheetRange: (sheetName: string, readSize: RowColOffset, offset: RowColOffset) => Promise<string>;
 };
@@ -408,19 +411,19 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     }
                 }
                 if (!opts.valueInputOption) opts.valueInputOption = 'USER_ENTERED';
-                return await doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
+                return (await doOp('PUT', id, `/values/${encodeURIComponent(range)}?${getFormData(opts)}`, {
                     values,
-                }) as Promise<IDoOpWithErrorReturn>;
+                })) as IDoOpUpdateWithErrorReturn;
             };
 
-            async function autoUpdateValues(sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms): Promise<IDoOpWithErrorReturn> {
+            async function autoUpdateValues(sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms): Promise<IDoOpUpdateWithErrorReturn> {
                 if (!values || !values.length) return null;
                 const writeSize: RowColOffset = {
                     col: values[0].length,
                     row: values.length,
                 };
                 const range = await getSheetRange(sheetName, writeSize, offset);
-                return await updateValues(range, values, opts) as Promise<IDoOpWithErrorReturn>;
+                return await updateValues(range, values, opts);
             }
 
             return {
