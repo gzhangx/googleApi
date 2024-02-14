@@ -6,8 +6,7 @@
 
 //import axios, { Method } from 'axios';
 import { doHttpRequest, HttpRequestMethod} from './httpRequest'
-import { getFormData } from './util'
-import { pick } from 'lodash';
+import { getFormData, pick } from './util'
 import { IRefreshTokenResult } from './msGraph/msauth';
 
 export interface IGClientCreds {
