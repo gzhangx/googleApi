@@ -7,7 +7,8 @@
 import { doHttpRequest, HttpRequestMethod } from '../httpRequest';
 import { getFormData, xcelPositionToColumnName } from '../util'
 import { pick } from 'lodash';
-import jwt from 'jsonwebtoken';
+//import jwt from 'jsonwebtoken';
+import * as jwt from '../jwt';
 
 
 export interface IServiceAccountCreds {
@@ -172,6 +173,14 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         if (curClientData.curToken && curClientData.expirationTime < curTime) {
             return curClientData.curToken;
         }
+        curClientData.curToken = jwt.signRs256(creds.private_key, {
+            iss: creds.client_email,
+            sub: creds.client_email,
+            exp: 3600,
+            aud: 'https://sheets.googleapis.com/',
+            kid: creds.private_key_id,
+        });
+        /*
         curClientData.curToken = jwt.sign({
             //"iss": cred.client_email,
             //"sub": cred.client_email,
@@ -189,6 +198,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             subject: creds.client_email,
             //"kid": cred.private_key_id
         });
+        */
         curClientData.expirationTime = curTime + 3600 - 100;
         return curClientData.curToken;
     };
