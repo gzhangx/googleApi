@@ -1,6 +1,6 @@
 
 const gs = require('../lib/google/googleApiServiceAccount')
-//const creds = require('../../googleSvcAccount-pem.json')
+const creds = require('../../../gskey.json')
 const util = require('../lib/util');
 const drive = require('../lib/google/drive')
 const {get, set, pick} = require('../lib/util');
@@ -11,7 +11,7 @@ const oo = {} ;
 set(oo, 'a.b.c', 2);
 console.log(oo);
 
-return console.log(pick({
+console.log(pick({
     a: '1',  c: { d: '3',e:'aa' }
 }, ['a','b','c.d']), 'pick')
 test().catch(err => {
@@ -20,12 +20,12 @@ test().catch(err => {
 
 async function testNewOps() {
     const token = 'ya29.-';
-    const cli = await gs.getClient({        
-        token
-    });
-    const ops = await cli.getSheetOps('1iEsvkhV_IsGegrdllsKHMBA6K5FWBtb_CTNzaL-wlBo');
+    const cli = await gs.getClient(creds);
+    const ops = await cli.getSheetOps('12rmBBbxS6j3-rL0vl25eGV8Hb3O-vNNDMdnNl7rAYeI');
     //await ops.clear('Sheet1', { col: 1, row: 1 });
-    console.log('cleared')
+    const rd = await ops.readData('Sheet1');
+    console.log('cleared', rd)
+    /*
     const createNewRes = await cli.createTopNewSheet({
         //spreadsheetId: 'testid',
         sheets: [],
@@ -48,7 +48,9 @@ async function testNewOps() {
             type:'user'
         }
     })
+    
     console.log(drivePermRes, 'drivePreRes');
+    */
     //const sheetInfo = await ops.sheetInfo();
     //console.log(sheetInfo, 'sheet info');
     //const updateRes = await ops.autoUpdateValues('Sheet1', [
