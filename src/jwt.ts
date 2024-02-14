@@ -29,6 +29,7 @@ export function signRs256(pk: string, payload: Payload) {
         throw new Error((`bad privateKey ${privateKey.type} should be private`));
     }
     const timestamp = payload.iat || Math.floor(Date.now() / 1000);
+    payload.iat = timestamp;
     payload.exp = payload.exp + timestamp;
 
     function sign(content: string) {
