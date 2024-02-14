@@ -28,3 +28,44 @@ export const xcelPositionToColumnName = (pos:number) => {
 }
 
 export * from './httpRequest'
+
+export function get(obj: any, path: string[]|string) {
+    if (!obj) return obj;
+    if (!path || !path.length) return obj;
+    if (typeof path === 'string') {
+        return get(obj, path.split('.'));
+    }
+    const [p1, ...po] = path;
+    return get(obj[p1], po);
+}
+
+export function set(obj: any, path:string|string[], val: any) {
+    if (!path || !path.length) return;
+    if (typeof path === 'string') {
+        set(obj, path.split('.'), val);
+    } else {
+        const [p1, ...po] = path;
+        if (!po.length) {
+            obj[p1] = val;
+        } else {
+            let rt = obj[p1];
+            if (!rt) {
+                rt = {};
+                obj[p1] = rt;
+            }
+            set(rt, po, val);
+        }
+    }
+}
+
+export function pick(obj: any, path: string[]) {
+    if (!path) return obj;
+    const res = {} as any;
+    for (const key of path) {
+        const val = get(obj, key);
+        if (val || val === 0) {
+            set(res, key, val);
+        }
+    }
+    return res;
+}

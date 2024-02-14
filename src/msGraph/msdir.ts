@@ -2,7 +2,6 @@ import { ILogger, IMsGraphCreds, getMsGraphConn } from "./msauth";
 import { sleep } from '../util'
 import {doHttpRequest} from '../httpRequest'
 import * as path from 'path'
-import { delay, toPath } from "lodash";
 interface IParentReference  {
     driveId: string;
     driveType?: string;

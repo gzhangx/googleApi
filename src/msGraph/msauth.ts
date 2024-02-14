@@ -1,8 +1,7 @@
 //import Axios, { GMRequestConfig } from "axios";
 import { doHttpRequest, OutgoingHttpHeaders, IHttpRequestPrms, IHttpResponseType } from '../httpRequest';
 //import * as  promise from 'bluebird';
-import { get } from 'lodash';
-import { getFormData} from '../util'
+import { getFormData, get} from '../util'
 
 export type ILogger = (...args: any[]) => void;
 

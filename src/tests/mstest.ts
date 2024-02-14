@@ -4,7 +4,7 @@ import * as all from '../index'
 import { IMsGraphCreds } from '../msGraph/msauth';
 import { IMsGraphDirPrms } from '../msGraph/msdir';
 import { IMsGraphExcelItemOpt } from '../msGraph/msExcell';
-import {get} from 'lodash'
+import {get} from '../util'
 
 function getTenantInfo() {
     let refresh_token = '';

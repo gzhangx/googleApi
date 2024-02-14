@@ -1,6 +1,5 @@
 import { getClientByEnv } from '../googleApi'
 import * as gs from '../google/googleApiServiceAccount'
-import { pick } from 'lodash';
 import * as fs from 'fs';
 
 async function test(d:boolean) {

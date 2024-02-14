@@ -1,8 +1,19 @@
 
 const gs = require('../lib/google/googleApiServiceAccount')
-const creds = require('../../googleSvcAccount-pem.json')
+//const creds = require('../../googleSvcAccount-pem.json')
 const util = require('../lib/util');
 const drive = require('../lib/google/drive')
+const {get, set, pick} = require('../lib/util');
+console.log(get({ a: { b: '1' } }, ['a', 'b', 'c']));
+console.log(get({ a: { b: '1' } }, 'a'));
+
+const oo = {} ;
+set(oo, 'a.b.c', 2);
+console.log(oo);
+
+return console.log(pick({
+    a: '1',  c: { d: '3',e:'aa' }
+}, ['a','b','c.d']), 'pick')
 test().catch(err => {
     console.log(err);
 })

@@ -6,7 +6,6 @@
 
 import { doHttpRequest, HttpRequestMethod } from '../httpRequest';
 import { getFormData, xcelPositionToColumnName } from '../util'
-import { pick } from 'lodash';
 //import jwt from 'jsonwebtoken';
 import * as jwt from '../jwt';
 
@@ -151,7 +150,12 @@ function betterErr(desc: string) {
         if (webRsp) {
             throw {
                 desc,
-                ...pick(webRsp, ['data', 'status', 'statusText', 'headers', 'config.url'])
+                //...pick(webRsp, ['data', 'status', 'statusText', 'headers', 'config.url'])
+                data: webRsp.data,
+                status: webRsp.status,
+                statusText: webRsp.statusText,
+                headers: webRsp.headers,
+                url: webRsp.config?.url,
             }
         }
         throw err;
