@@ -8,7 +8,7 @@ export interface IHttpRequestPrms {
     url: string;
     method: HttpRequestMethod;
     headers?: http.OutgoingHttpHeaders;
-    data?: string | object;
+    data?: string | object | Buffer;
     resProcessor?: (res: http.IncomingMessage, resolve: PromiseRejType, reject: PromiseRejType) => {};
     resDataProcessor?: (res: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => void;
     followRedirect?: boolean;
@@ -52,13 +52,17 @@ export async function doHttpRequest(
         if (data !== null && data !== undefined) {
             if (!headers)
                 headers = {};
-            if (typeof data !== 'string') {
-                data = JSON.stringify(data);
-                if (!headers['Content-Type']) {
-                    headers['Content-Type'] = 'application/json';
+            if (Buffer.isBuffer(data)) {
+                dataToSent = data;
+            } else {
+                if (typeof data !== 'string') {
+                    data = JSON.stringify(data);
+                    if (!headers['Content-Type']) {
+                        headers['Content-Type'] = 'application/json';
+                    }
                 }
-            }            
-            dataToSent = Buffer.from(data, 'utf-8');
+                dataToSent = Buffer.from(data, 'utf-8');
+            }
             headers['Content-Length'] = dataToSent.length;
         }
         const req = httpRequest({
