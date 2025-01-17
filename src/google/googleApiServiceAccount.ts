@@ -348,6 +348,10 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                         }
                     }
                     if (!readSize.col) readSize.col = info.columnCount;
+                    if (offset.col !== 0 && !offset.col) offset.col = 0;
+                    if (offset.row !== 0 && !offset.row) {
+                        throw 'Offset.row must be specified';
+                    }
                     const endCol = readSize.col + offset.col;          
 
                     const appendOps: RowColOffset = {
@@ -452,7 +456,13 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
             const getSheetOpsReturn: IGetSheetOpsReturn = {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 appendRowCols,
-                append: (range, data, ops) => append({ id, range }, data, ops),
+                append: async (origRange, data, ops) => {
+                    let range = origRange;
+                    if (range.indexOf('!') < 0) {
+                        range = await getSheetRange(range);
+                    }
+                    return await append({ id, range }, data, ops);
+                },
                 read: range => read({ id, range }),
                 clear,
                 sheetInfo,

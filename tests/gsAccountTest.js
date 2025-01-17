@@ -12,6 +12,16 @@ async function testNewOps() {
     //await ops.clear('Sheet1', { col: 1, row: 1 });
     const rd = await ops.readData('Sheet1');
     console.log('cleared', rd)
+
+    console.log('append res', await ops.append('Sheet1', [['a', 'b']]));
+    
+
+    await ops.autoUpdateValues('Sheet1', [['axxxxxx', String.fromCharCode(Math.trunc(Math.random()*10)+'A'.charCodeAt(0))]], {
+        row: 20,
+        col: 0,
+    }).catch(err => {
+        console.log(err);
+    })
     /*
     const createNewRes = await cli.createTopNewSheet({
         //spreadsheetId: 'testid',
