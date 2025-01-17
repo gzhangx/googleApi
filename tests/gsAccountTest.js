@@ -3,23 +3,10 @@ const gs = require('../lib/google/googleApiServiceAccount')
 const creds = require('../../../gskey.json')
 const util = require('../lib/util');
 const drive = require('../lib/google/drive')
-const {get, set, pick} = require('../lib/util');
-console.log(get({ a: { b: '1' } }, ['a', 'b', 'c']));
-console.log(get({ a: { b: '1' } }, 'a'));
 
-const oo = {} ;
-set(oo, 'a.b.c', 2);
-console.log(oo);
 
-console.log(pick({
-    a: '1',  c: { d: '3',e:'aa' }
-}, ['a','b','c.d']), 'pick')
-test().catch(err => {
-    console.log(err);
-})
-
+testNewOps();
 async function testNewOps() {
-    const token = 'ya29.-';
     const cli = await gs.getClient(creds);
     const ops = await cli.getSheetOps('12rmBBbxS6j3-rL0vl25eGV8Hb3O-vNNDMdnNl7rAYeI');
     //await ops.clear('Sheet1', { col: 1, row: 1 });

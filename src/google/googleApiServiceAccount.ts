@@ -92,6 +92,8 @@ interface IIdRange {
     id: string; range: string;
 }
 interface IReadReturn {
+    range: string; //'Sheet1!A1:Z1000'
+    //majorDimension: 'ROWS',
     values: string[][];
 }
 type IDoOpReturn = Promise<string | object | Buffer>;
@@ -111,10 +113,10 @@ export type IGetSheetOpsReturn = {
     doBatchUpdate: (data: any) => IDoOpReturn;
     appendRowCols: (sheetId: number, ap: RowColOffset) => IDoOpReturn;
     append: (range: string, data: any, opts?: any) => IDoOpReturn;
-    read: (range: string) => IDoOpReturn;
+    read: (range: string) => Promise<IReadReturn>;
     clear: (sheetName: string, offset?: RowColOffset, clearRange?: RowColOffset) => IDoOpReturn;
     readDataByColumnName: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data?: ({ [name: string]: string }[]), message: string }>;
-    readData: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<{ data ?: (string[][]), message: string }>;
+    readData: (sheetName: string, readSize?: RowColOffset, offset?: RowColOffset) => Promise<IReadReturn>;
     sheetInfo: () => Promise<ISheetInfoSimple[]>;
     createSheet: (sheetId: string, title: string) => IDoOpReturn;
     deleteSheet: (sheetId: number) => IDoOpReturn;
@@ -251,7 +253,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         return await doPost(id, `/values/${range}:append?${getFormData(opts)}`, { values: data });
     };
     const read: IReadFunc = async ({ id, range }) => (await doOp('GET', id, `/values/${range}`)) as any as IReadReturn;    
-    return {
+    const ret: IGoogleClient = {
         //access_token,
         //expires_on: new Date().getTime() + (expires_in * 1000 - 2000),
         //token_type,
@@ -419,9 +421,10 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 
                 const message = ret.values ? 'OK' : `bad data found for id ${id} sheet ${sheetName}`;                
                 return {
+                    range: sheetName,
                     message,
-                    data: ret.values,
-                }
+                    values: ret.values,
+                } as IReadReturn;
             }
 
             const updateValues = async (range: string, values: string[][], opts?: IGoogleUpdateParms) => {
@@ -446,7 +449,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 return await updateValues(range, values, opts);
             }
 
-            return {
+            const getSheetOpsReturn: IGetSheetOpsReturn = {
                 doBatchUpdate: data => doBatchUpdate(id, data),
                 appendRowCols,
                 append: (range, data, ops) => append({ id, range }, data, ops),
@@ -480,8 +483,10 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     return createSheet(newId.toString(), title);
                 },            
             }
+            return getSheetOpsReturn;
         }
     }
+    return ret;
 }
 
 
