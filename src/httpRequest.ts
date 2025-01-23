@@ -1,6 +1,7 @@
 import * as https from 'https';
 import * as http from 'http';
 
+
 export type OutgoingHttpHeaders = http.OutgoingHttpHeaders;
 export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 type PromiseRejType = (d: unknown) => void;
@@ -23,6 +24,16 @@ export interface IHttpResponseType {
     statusCode?: number;
     statusMessage?: string;
 }
+
+export function getFormData(obj: { [id: string]: any }): (string | null) {
+    if (!obj) return null;
+    const keys = Object.keys(obj);
+    const data = keys.map(key => {
+        return `${key}=${encodeURIComponent(obj[key])}`;
+    }).join('&')
+    return data;
+}
+
 export async function doHttpRequest(
     requestPrms: IHttpRequestPrms): Promise<IHttpResponseType> {
     
@@ -55,13 +66,27 @@ export async function doHttpRequest(
             if (Buffer.isBuffer(data)) {
                 dataToSent = data;
             } else {
-                if (typeof data !== 'string') {
-                    data = JSON.stringify(data);
-                    if (!headers['Content-Type']) {
-                        headers['Content-Type'] = 'application/json';
+                if (typeof data !== 'string') {                    
+                    let contentType = '';
+                    let isForm = false;
+                    for (const key of Object.keys(headers)) {
+                        if (key.toLowerCase() === 'content-type') {
+                            contentType = headers[key] as string;
+                            if (contentType === 'application/x-www-form-urlencoded') {
+                                data = getFormData(data as any);
+                                isForm = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!contentType) {                        
+                        headers['Content-Type'] = 'application/json';                        
+                    }
+                    if (!isForm) {
+                        data = JSON.stringify(data);
                     }
                 }
-                dataToSent = Buffer.from(data, 'utf-8');
+                dataToSent = Buffer.from(data as string, 'utf-8');
             }
             headers['Content-Length'] = dataToSent.length;
         }
