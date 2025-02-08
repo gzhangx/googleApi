@@ -121,6 +121,7 @@ export type IGetSheetOpsReturn = {
     createSheet: (sheetId: string, title: string) => IDoOpReturn;
     deleteSheet: (sheetId: number) => IDoOpReturn;
     deleteSheetByName: (sheetTitle: string) => IDoOpReturn;
+    deleteRowOrCol: (sheetName: string, dimension: 'ROWS' | 'COLUMNS', startIndex: number, endIndex: number) => IDoOpReturn;
     autoCreateSheet: (title: string) => IDoOpReturn;  //create sheet and use current sheetId to create a new sheet
     updateValues: (range: string, values: string[][], opts?: IGoogleUpdateParms) => Promise<IDoOpUpdateWithErrorReturn>;
     autoUpdateValues: (sheetName: string, values: string[][], offset?: RowColOffset, opts?: IGoogleUpdateParms) => Promise<IDoOpUpdateWithErrorReturn>;
@@ -282,6 +283,30 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                     ]
                 })
             };
+
+            const deleteRowOrCol = async (sheetName: string, dimension: 'ROWS' | 'COLUMNS', startIndex: number, endIndex: number) => {
+                const sheets = await sheetInfo();
+                const sheet = sheets.find(s => s.title === sheetName);
+                if (sheet) {
+                    return doBatchUpdate(id, {
+                        requests: [
+                            {
+                                deleteDimension: {
+                                    range: {
+                                        sheetId: sheet.sheetId,
+                                        dimension,
+                                        startIndex,
+                                        endIndex,
+                                    }
+                                }
+                            }
+                        ]
+                    })
+                }
+                return {
+                    message: 'not found',
+                }
+            }
             const deleteSheet = async (sheetId: number) => {
                 return doBatchUpdate(id, {
                     requests: [
@@ -474,6 +499,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 readData,
                 deleteSheet,
                 deleteSheetByName,
+                deleteRowOrCol,
                 getSheetRange,
                 addSheet: async (title: string) => {
                     const sheetsInfo = await sheetInfo();                
