@@ -284,6 +284,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 })
             };
 
+            //startIndex: 1 based, will start delete from next row.  endIndex: 1 based, will be deleted
             const deleteRowOrCol = async (sheetName: string, dimension: 'ROWS' | 'COLUMNS', startIndex: number, endIndex: number) => {
                 const sheets = await sheetInfo();
                 const sheet = sheets.find(s => s.title === sheetName);

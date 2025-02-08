@@ -10,18 +10,22 @@ async function testNewOps() {
     const cli = await gs.getClient(creds);
     const ops = await cli.getSheetOps('12rmBBbxS6j3-rL0vl25eGV8Hb3O-vNNDMdnNl7rAYeI');
     //await ops.clear('Sheet1', { col: 1, row: 1 });
-    const rd = await ops.readData('Sheet1');
-    console.log('cleared', rd)
+    //const rd = await ops.readData('Sheet1');
+    //console.log('cleared', rd)
 
-    console.log('append res', await ops.append('Sheet1', [['a', 'b']]));
+    //console.log('append res', await ops.append('Sheet1', [['a', 'b']]));
     
 
-    await ops.autoUpdateValues('Sheet1', [['axxxxxx', String.fromCharCode(Math.trunc(Math.random()*10)+'A'.charCodeAt(0))]], {
-        row: 20,
-        col: 0,
-    }).catch(err => {
-        console.log(err);
-    })
+    
+    //await ops.autoUpdateValues('Sheet1', [['axxxxxx', String.fromCharCode(Math.trunc(Math.random()*10)+'A'.charCodeAt(0))]], {
+    //    row: 20,
+    //    col: 0,
+    //}).catch(err => {
+    //    console.log(err);
+    //})
+
+    const drs = await ops.deleteRowOrCol('Sheet1', 'ROWS', 18, 19)
+    console.log(drs);
     /*
     const createNewRes = await cli.createTopNewSheet({
         //spreadsheetId: 'testid',
