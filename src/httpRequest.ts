@@ -1,24 +1,36 @@
-import * as https from 'https';
-import * as http from 'http';
+// Check if we're in a browser environment
+const isBrowser = typeof globalThis !== 'undefined' && 
+                  typeof (globalThis as any).window !== 'undefined' && 
+                  typeof (globalThis as any).document !== 'undefined';
 
+// Node.js imports (only used in Node.js environment)
+let https: any;
+let http: any;
 
-export type OutgoingHttpHeaders = http.OutgoingHttpHeaders;
+if (!isBrowser) {
+    https = require('https');
+    http = require('http');
+}
+
+export type OutgoingHttpHeaders = Record<string, string | string[] | number>;
+export type IncomingHttpHeaders = Record<string, string | string[]>;
 export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 type PromiseRejType = (d: unknown) => void;
+type HeadersInit = Record<string, string>;
 export interface IHttpRequestPrms {
     url: string;
     method: HttpRequestMethod;
-    headers?: http.OutgoingHttpHeaders;
-    data?: string | object | Buffer;
-    resProcessor?: (res: http.IncomingMessage, resolve: PromiseRejType, reject: PromiseRejType) => {};
+    headers?: OutgoingHttpHeaders;
+    data?: string | object | Buffer | Uint8Array;
+    resProcessor?: (res: any, resolve: PromiseRejType, reject: PromiseRejType) => {};
     resDataProcessor?: (res: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => void;
     followRedirect?: boolean;
 }
 
 export interface IHttpResponseType {
-    data: string | Buffer | object;
+    data: string | Buffer | Uint8Array | object;
     url: string;
-    headers: http.IncomingHttpHeaders;
+    headers: IncomingHttpHeaders;
     complete: boolean;
     requestData: string | object;
     statusCode?: number;
@@ -37,12 +49,105 @@ export function getFormData(obj: { [id: string]: any }): (string | null) {
 export async function doHttpRequest(
     requestPrms: IHttpRequestPrms): Promise<IHttpResponseType> {
     
+    if (isBrowser) {
+        return doHttpRequestBrowser(requestPrms);
+    } else {
+        return doHttpRequestNode(requestPrms);
+    }
+}
+
+// Browser implementation using fetch API
+async function doHttpRequestBrowser(requestPrms: IHttpRequestPrms): Promise<IHttpResponseType> {
     const rspDataProcessor = requestPrms.resDataProcessor || ((rspData: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => {
         const contentType = rspData.headers['content-type'];
-        if (contentType && contentType.toLowerCase().indexOf('application/json') >= 0) {
+        if (contentType && typeof contentType === 'string' && contentType.toLowerCase().indexOf('application/json') >= 0) {
             return resolve({
                 ...rspData,
-                data: rspData.data ? JSON.parse(rspData.data.toString('utf-8')) : rspData.data,
+                data: rspData.data ? JSON.parse(typeof rspData.data === 'string' ? rspData.data : new TextDecoder().decode(rspData.data as Uint8Array)) : rspData.data,
+            });
+        }
+        resolve(rspData);
+    });
+
+    let { headers, data } = requestPrms;
+    const { url, method, followRedirect = true } = requestPrms;
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            let bodyData: string | Uint8Array | undefined;
+            if (data !== null && data !== undefined) {
+                if (!headers) headers = {};
+                
+                if (data instanceof Uint8Array || (typeof Buffer !== 'undefined' && Buffer.isBuffer(data))) {
+                    bodyData = data instanceof Uint8Array ? data : new Uint8Array(data);
+                } else {
+                    if (typeof data !== 'string') {
+                        let contentType = '';
+                        let isForm = false;
+                        for (const key of Object.keys(headers)) {
+                            if (key.toLowerCase() === 'content-type') {
+                                contentType = headers[key] as string;
+                                if (contentType === 'application/x-www-form-urlencoded') {
+                                    data = getFormData(data as any);
+                                    isForm = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!contentType) {
+                            headers['Content-Type'] = 'application/json';
+                        }
+                        if (!isForm) {
+                            data = JSON.stringify(data);
+                        }
+                    }
+                    bodyData = data as string;
+                }
+            }
+
+            const fetchOptions: RequestInit = {
+                method,
+                headers: headers as HeadersInit,
+                body: bodyData,
+                redirect: followRedirect ? 'follow' : 'manual',
+            };
+
+            const response = await fetch(url, fetchOptions);
+            
+            const arrayBuffer = await response.arrayBuffer();
+            const dataBuffer = new Uint8Array(arrayBuffer);
+            
+            // Convert Headers to plain object
+            const responseHeaders: IncomingHttpHeaders = {};
+            response.headers.forEach((value, key) => {
+                responseHeaders[key] = value;
+            });
+
+            const rspData: IHttpResponseType = {
+                headers: responseHeaders,
+                url,
+                requestData: data,
+                data: dataBuffer,
+                complete: true,
+                statusCode: response.status,
+                statusMessage: response.statusText,
+            };
+
+            rspDataProcessor(rspData, resolve, reject);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
+// Node.js implementation using http/https modules
+async function doHttpRequestNode(requestPrms: IHttpRequestPrms): Promise<IHttpResponseType> {
+    const rspDataProcessor = requestPrms.resDataProcessor || ((rspData: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => {
+        const contentType = rspData.headers['content-type'];
+        if (contentType && typeof contentType === 'string' && contentType.toLowerCase().indexOf('application/json') >= 0) {
+            return resolve({
+                ...rspData,
+                data: rspData.data ? JSON.parse((rspData.data as Buffer).toString('utf-8')) : rspData.data,
             });
         }
         resolve(rspData);

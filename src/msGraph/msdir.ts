@@ -137,15 +137,14 @@ export async function getMsDir(prms: IMsGraphDirPrms): Promise<IMsDirOps> {
             name: toName,
         };
         const headers = await ops.getHeaders();
-        return doHttpRequest({
+        const res = await doHttpRequest({
             method: 'POST', url: ops.getMsGraphBaseUrl(`${getDriveAndByIdUrl(driveId, itemId)}/copy?@microsoft.graph.conflictBehavior=rename`),
             data: postData, headers: headers.headers
-        }).then(res => {
+        });
             //console.log(res);
-            return {
-                checkUrl: res.headers.location,
-            }
-        })        
+        return {
+            checkUrl: res.headers.location as string,
+        }               
     }
 
     async function copyItemByName(fname: string, toName: string, delayMs?: number, logger: ILogger = null) {
