@@ -128,12 +128,17 @@ export type IGetSheetOpsReturn = {
     addSheet: (title: string) => IDoOpReturn;
     getSheetRange: (sheetName: string, readSize: RowColOffset, offset: RowColOffset) => Promise<string>;
 };
+
+interface ISheetInfoCache {
+    getCachedSheetInfo(): ISheetInfoSimple[] | null;
+    setCacheSheetInfo(data: ISheetInfoSimple[]): void;
+}
 export interface IGoogleClient {
     getToken: () => string;
     doBatchUpdate: (id: string, data: any) => IDoOpReturn;
     append: IAppendFunc;
     read: IReadFunc;
-    getSheetOps: (id: string) => IGetSheetOpsReturn;
+    getSheetOps: (id: string, sheetInfoCache?: ISheetInfoCache) => IGetSheetOpsReturn;
     createTopNewSheet: (data: IGoogleSheetInfo) => Promise<IGoogleSheetInfo>;
 }
 
@@ -263,7 +268,7 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
         append,
         read,
         createTopNewSheet,
-        getSheetOps: id => {
+        getSheetOps: (id, sheetInfoCache) => {
             const getInfo = () => doOp('GET', id, '') as any as Promise<IGoogleSheetInfo>;
             const clear = async (sheetName: string, offset?: RowColOffset, clearRange?: RowColOffset) => {                
                 const range = await getSheetRange(sheetName, clearRange, offset);                
@@ -331,11 +336,17 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                 }
             }
             const sheetInfo = async () => {
+                if (sheetInfoCache) {
+                    const cached = sheetInfoCache.getCachedSheetInfo();
+                    if (cached) {
+                        return cached;
+                    }
+                }
                 const sheetInfos = await getInfo();
                 if (sheetInfos.error) {
                     throw sheetInfos.error;
                 }
-                return sheetInfos.sheets.map(s => {
+                const sheetInfoData = sheetInfos.sheets.map(s => {
                     const props = s.properties;
                     return {
                         sheetId: props.sheetId,
@@ -344,6 +355,10 @@ export function getClient(creds: IServiceAccountCreds): IGoogleClient {
                         ...props.gridProperties, //rowCount, columnCount
                     } as ISheetInfoSimple;
                 })
+                if (sheetInfoCache) {
+                    sheetInfoCache.setCacheSheetInfo(sheetInfoData);
+                }
+                return sheetInfoData;
             };
             
             ///  create sheet and deduct sheet Id from existing
