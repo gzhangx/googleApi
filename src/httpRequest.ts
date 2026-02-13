@@ -4,13 +4,6 @@ const isBrowser = typeof globalThis !== 'undefined' &&
                   typeof (globalThis as any).document !== 'undefined';
 
 // Node.js imports (only used in Node.js environment)
-let https: any;
-let http: any;
-
-if (!isBrowser) {
-    https = require('https');
-    http = require('http');
-}
 
 export type OutgoingHttpHeaders = Record<string, string | string[] | number>;
 export type IncomingHttpHeaders = Record<string, string | string[]>;
@@ -140,8 +133,17 @@ async function doHttpRequestBrowser(requestPrms: IHttpRequestPrms): Promise<IHtt
     });
 }
 
+
+let https: any;
+let http: any;
+
 // Node.js implementation using http/https modules
 async function doHttpRequestNode(requestPrms: IHttpRequestPrms): Promise<IHttpResponseType> {
+    if (!https) {
+        https = await import('https');
+        http = await import('http');
+    }
+    
     const rspDataProcessor = requestPrms.resDataProcessor || ((rspData: IHttpResponseType, resolve: PromiseRejType, reject: PromiseRejType) => {
         const contentType = rspData.headers['content-type'];
         if (contentType && typeof contentType === 'string' && contentType.toLowerCase().indexOf('application/json') >= 0) {
